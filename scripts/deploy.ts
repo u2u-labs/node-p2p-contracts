@@ -1,6 +1,7 @@
-import { ethers } from "hardhat";
+import { ethers, run } from "hardhat";
 import { writeFileSync } from "fs";
 import { join } from "path";
+import { AddressLike } from "ethers";
 
 async function main() {
   console.log("Starting deployment process...");
@@ -9,13 +10,18 @@ async function main() {
   const deployerAddress = await deployer.getAddress();
   console.log(`Deploying contracts with the account: ${deployerAddress}`);
 
-  const initialNodes = [deployerAddress];
+  const initialNodes: AddressLike[] = [];
   console.log("Deploying NodesStorage contract...");
   const NodesStorageFactory = await ethers.getContractFactory("NodesStorage");
   const nodesStorage = await NodesStorageFactory.deploy(initialNodes);
   await nodesStorage.waitForDeployment();
   const nodesStorageAddress = await nodesStorage.getAddress();
   console.log(`NodesStorage deployed to: ${nodesStorageAddress}`);
+  await run("verify:verify", {
+    address: nodesStorageAddress,
+    constructorArguments: [initialNodes],
+  });
+  console.log("NodesStorage verified successfully");
 
   console.log("Deploying NodeDataPayment contract...");
   const NodeDataPaymentFactory = await ethers.getContractFactory(
@@ -27,10 +33,28 @@ async function main() {
   await nodeDataPayment.waitForDeployment();
   const nodeDataPaymentAddress = await nodeDataPayment.getAddress();
   console.log(`NodeDataPayment deployed to: ${nodeDataPaymentAddress}`);
+  await run("verify:verify", {
+    address: nodeDataPaymentAddress,
+    constructorArguments: [nodesStorageAddress],
+  });
+  console.log("NodeDataPayment verified successfully");
+
+  console.log("Deploying Voting contract...");
+  const VotingFactory = await ethers.getContractFactory("Voting");
+  const voting = await VotingFactory.deploy(nodesStorageAddress, 51);
+  await voting.waitForDeployment();
+  const votingAddress = await voting.getAddress();
+  console.log(`Voting deployed to: ${votingAddress}`);
+  await run("verify:verify", {
+    address: votingAddress,
+    constructorArguments: [nodesStorageAddress, 51],
+  });
+  console.log("Voting verified successfully");
 
   const deploymentData = {
     nodesStorage: nodesStorageAddress,
     nodeDataPayment: nodeDataPaymentAddress,
+    voting: votingAddress,
     network: (await ethers.provider.getNetwork()).name,
     deployer: deployerAddress,
     timestamp: new Date().toISOString(),
