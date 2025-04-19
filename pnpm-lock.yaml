@@ -7,13 +7,16 @@ settings:
 importers:
 
   .:
-    dependencies:
+    devDependencies:
       '@nomicfoundation/hardhat-chai-matchers':
         specifier: ^2.0.8
         version: 2.0.8(@nomicfoundation/hardhat-ethers@3.0.8(ethers@6.13.5)(hardhat@2.23.0(ts-node@10.9.2(@types/node@22.14.1)(typescript@5.8.3))(typescript@5.8.3)))(chai@4.5.0)(ethers@6.13.5)(hardhat@2.23.0(ts-node@10.9.2(@types/node@22.14.1)(typescript@5.8.3))(typescript@5.8.3))
       '@nomicfoundation/hardhat-ethers':
         specifier: ^3.0.8
         version: 3.0.8(ethers@6.13.5)(hardhat@2.23.0(ts-node@10.9.2(@types/node@22.14.1)(typescript@5.8.3))(typescript@5.8.3))
+      '@nomicfoundation/hardhat-toolbox':
+        specifier: ^5.0.0
+        version: 5.0.0(97cd51a1e553f718013d3bfc30d4c04f)
       '@nomiclabs/hardhat-ethers':
         specifier: ^2.2.3
         version: 2.2.3(ethers@6.13.5)(hardhat@2.23.0(ts-node@10.9.2(@types/node@22.14.1)(typescript@5.8.3))(typescript@5.8.3))
@@ -23,10 +26,6 @@ importers:
       '@typechain/hardhat':
         specifier: ^9.1.0
         version: 9.1.0(@typechain/ethers-v6@0.5.1(ethers@6.13.5)(typechain@8.3.2(typescript@5.8.3))(typescript@5.8.3))(ethers@6.13.5)(hardhat@2.23.0(ts-node@10.9.2(@types/node@22.14.1)(typescript@5.8.3))(typescript@5.8.3))(typechain@8.3.2(typescript@5.8.3))
-    devDependencies:
-      '@nomicfoundation/hardhat-toolbox':
-        specifier: ^5.0.0
-        version: 5.0.0(97cd51a1e553f718013d3bfc30d4c04f)
       '@types/chai':
         specifier: ^5.2.1
         version: 5.2.1
