@@ -187,4 +187,166 @@ describe("NodeDataPayment Contract", function () {
     // So we only check the node received the funds
     expect(balanceAfterNode).to.be.greaterThan(balanceBeforeNode);
   });
+
+  it("should reject when signature doesn't match bill data", async () => {
+    const nonce = 0;
+    const usedAmount = 5;
+    const unitPrice = ethers.parseEther("1");
+
+    const nodeAddress = await node.getAddress();
+    const clientAddress = await client.getAddress();
+    const tokenAddress = await token.getAddress();
+
+    // First, create a valid bill
+    const validBill = {
+      node: nodeAddress,
+      client: clientAddress,
+      dataPlan: { unitPrice },
+      payment: {
+        tokenType: 1, // ERC20
+        tokenAddress: tokenAddress,
+      },
+      usedAmount,
+      nonce,
+    };
+
+    const types = {
+      DataPlan: [{ name: "unitPrice", type: "uint256" }],
+      Payment: [
+        { name: "tokenType", type: "uint8" },
+        { name: "tokenAddress", type: "address" },
+      ],
+      Bill: [
+        { name: "node", type: "address" },
+        { name: "client", type: "address" },
+        { name: "dataPlan", type: "DataPlan" },
+        { name: "payment", type: "Payment" },
+        { name: "usedAmount", type: "uint256" },
+        { name: "nonce", type: "uint256" },
+      ],
+    };
+
+    // Generate a signature for the valid bill
+    const validSignature = await node.signTypedData(domain, types, validBill);
+
+    // Now create a modified bill with different data
+    const modifiedBill = {
+      ...validBill,
+      usedAmount: 10, // Change the usage amount
+    };
+
+    // Try to use the original signature with the modified bill data
+    await expect(
+      nodeDataPayment
+        .connect(client)
+        .fulfillDataBill(modifiedBill, validSignature)
+    ).to.be.revertedWith("Signature mismatch");
+  });
+
+  it("should reject when signature is from wrong signer", async () => {
+    const nonce = 0;
+    const usedAmount = 5;
+    const unitPrice = ethers.parseEther("1");
+
+    const nodeAddress = await node.getAddress();
+    const clientAddress = await client.getAddress();
+
+    // Set up the bill
+    const bill = {
+      node: nodeAddress,
+      client: clientAddress,
+      dataPlan: { unitPrice },
+      payment: {
+        tokenType: 0, // Native
+        tokenAddress: ethers.ZeroAddress,
+      },
+      usedAmount,
+      nonce,
+    };
+
+    const types = {
+      DataPlan: [{ name: "unitPrice", type: "uint256" }],
+      Payment: [
+        { name: "tokenType", type: "uint8" },
+        { name: "tokenAddress", type: "address" },
+      ],
+      Bill: [
+        { name: "node", type: "address" },
+        { name: "client", type: "address" },
+        { name: "dataPlan", type: "DataPlan" },
+        { name: "payment", type: "Payment" },
+        { name: "usedAmount", type: "uint256" },
+        { name: "nonce", type: "uint256" },
+      ],
+    };
+
+    // Generate signature using the client instead of the node
+    // This should fail since the bill claims it's from the node
+    const invalidSignature = await client.signTypedData(domain, types, bill);
+    const totalPrice = unitPrice * BigInt(usedAmount);
+
+    await expect(
+      nodeDataPayment.connect(client).fulfillDataBill(bill, invalidSignature, {
+        value: totalPrice,
+      })
+    ).to.be.revertedWith("Signature mismatch");
+  });
+
+  it("should reject if bill fields are tampered with", async () => {
+    const nonce = 0;
+    const usedAmount = 5;
+    const unitPrice = ethers.parseEther("1");
+    const originalTotalPrice = unitPrice * BigInt(usedAmount);
+
+    const nodeAddress = await node.getAddress();
+    const clientAddress = await client.getAddress();
+
+    // Original bill with lower price
+    const originalBill = {
+      node: nodeAddress,
+      client: clientAddress,
+      dataPlan: { unitPrice },
+      payment: {
+        tokenType: 0, // Native
+        tokenAddress: ethers.ZeroAddress,
+      },
+      usedAmount,
+      nonce,
+    };
+
+    const types = {
+      DataPlan: [{ name: "unitPrice", type: "uint256" }],
+      Payment: [
+        { name: "tokenType", type: "uint8" },
+        { name: "tokenAddress", type: "address" },
+      ],
+      Bill: [
+        { name: "node", type: "address" },
+        { name: "client", type: "address" },
+        { name: "dataPlan", type: "DataPlan" },
+        { name: "payment", type: "Payment" },
+        { name: "usedAmount", type: "uint256" },
+        { name: "nonce", type: "uint256" },
+      ],
+    };
+
+    // Get signature for original bill
+    const signature = await node.signTypedData(domain, types, originalBill);
+
+    // Create a tampered bill with lower unit price (trying to pay less)
+    const tamperedBill = {
+      ...originalBill,
+      dataPlan: {
+        unitPrice: ethers.parseEther("0.5"), // Half the original price
+      },
+    };
+    const tamperedTotalPrice = ethers.parseEther("0.5") * BigInt(usedAmount);
+
+    // Should reject the tampered bill with original signature
+    await expect(
+      nodeDataPayment.connect(client).fulfillDataBill(tamperedBill, signature, {
+        value: tamperedTotalPrice,
+      })
+    ).to.be.revertedWith("Signature mismatch");
+  });
 });
