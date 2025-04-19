@@ -1,0 +1,418 @@
+{
+	"id": "ecd4be58b747b52cd0bad0e2c3a42a7a",
+	"_format": "hh-sol-build-info-1",
+	"solcVersion": "0.8.26",
+	"solcLongVersion": "0.8.26+commit.8a97fa7a",
+	"input": {
+		"language": "Solidity",
+		"sources": {
+			"contracts/payment/lib/LibTypes.sol": {
+				"content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.20;\n\nenum TokenType {\n    Native,\n    ERC20\n}\n\nstruct Payment {\n    TokenType tokenType;\n    address tokenAddress;\n}\n\nstruct DataPlan {\n    uint256 unitPrice; //price per GB used\n}\n\nstruct Bill {\n    address node;\n    address client;\n    DataPlan dataPlan;\n    Payment payment;\n    uint256 usedAmount;\n    uint256 nonce;\n}\n"
+			}
+		},
+		"settings": {
+			"optimizer": {
+				"enabled": false,
+				"runs": 200
+			},
+			"outputSelection": {
+				"*": {
+					"": [
+						"ast"
+					],
+					"*": [
+						"abi",
+						"metadata",
+						"devdoc",
+						"userdoc",
+						"storageLayout",
+						"evm.legacyAssembly",
+						"evm.bytecode",
+						"evm.deployedBytecode",
+						"evm.methodIdentifiers",
+						"evm.gasEstimates",
+						"evm.assembly"
+					]
+				}
+			},
+			"remappings": []
+		}
+	},
+	"output": {
+		"sources": {
+			"contracts/payment/lib/LibTypes.sol": {
+				"ast": {
+					"absolutePath": "contracts/payment/lib/LibTypes.sol",
+					"exportedSymbols": {
+						"Bill": [
+							28
+						],
+						"DataPlan": [
+							13
+						],
+						"Payment": [
+							10
+						],
+						"TokenType": [
+							4
+						]
+					},
+					"id": 29,
+					"license": "MIT",
+					"nodeType": "SourceUnit",
+					"nodes": [
+						{
+							"id": 1,
+							"literals": [
+								"solidity",
+								"^",
+								"0.8",
+								".20"
+							],
+							"nodeType": "PragmaDirective",
+							"src": "32:24:0"
+						},
+						{
+							"canonicalName": "TokenType",
+							"id": 4,
+							"members": [
+								{
+									"id": 2,
+									"name": "Native",
+									"nameLocation": "79:6:0",
+									"nodeType": "EnumValue",
+									"src": "79:6:0"
+								},
+								{
+									"id": 3,
+									"name": "ERC20",
+									"nameLocation": "91:5:0",
+									"nodeType": "EnumValue",
+									"src": "91:5:0"
+								}
+							],
+							"name": "TokenType",
+							"nameLocation": "63:9:0",
+							"nodeType": "EnumDefinition",
+							"src": "58:40:0"
+						},
+						{
+							"canonicalName": "Payment",
+							"id": 10,
+							"members": [
+								{
+									"constant": false,
+									"id": 7,
+									"mutability": "mutable",
+									"name": "tokenType",
+									"nameLocation": "131:9:0",
+									"nodeType": "VariableDeclaration",
+									"scope": 10,
+									"src": "121:19:0",
+									"stateVariable": false,
+									"storageLocation": "default",
+									"typeDescriptions": {
+										"typeIdentifier": "t_enum$_TokenType_$4",
+										"typeString": "enum TokenType"
+									},
+									"typeName": {
+										"id": 6,
+										"nodeType": "UserDefinedTypeName",
+										"pathNode": {
+											"id": 5,
+											"name": "TokenType",
+											"nameLocations": [
+												"121:9:0"
+											],
+											"nodeType": "IdentifierPath",
+											"referencedDeclaration": 4,
+											"src": "121:9:0"
+										},
+										"referencedDeclaration": 4,
+										"src": "121:9:0",
+										"typeDescriptions": {
+											"typeIdentifier": "t_enum$_TokenType_$4",
+											"typeString": "enum TokenType"
+										}
+									},
+									"visibility": "internal"
+								},
+								{
+									"constant": false,
+									"id": 9,
+									"mutability": "mutable",
+									"name": "tokenAddress",
+									"nameLocation": "154:12:0",
+									"nodeType": "VariableDeclaration",
+									"scope": 10,
+									"src": "146:20:0",
+									"stateVariable": false,
+									"storageLocation": "default",
+									"typeDescriptions": {
+										"typeIdentifier": "t_address",
+										"typeString": "address"
+									},
+									"typeName": {
+										"id": 8,
+										"name": "address",
+										"nodeType": "ElementaryTypeName",
+										"src": "146:7:0",
+										"stateMutability": "nonpayable",
+										"typeDescriptions": {
+											"typeIdentifier": "t_address",
+											"typeString": "address"
+										}
+									},
+									"visibility": "internal"
+								}
+							],
+							"name": "Payment",
+							"nameLocation": "107:7:0",
+							"nodeType": "StructDefinition",
+							"scope": 29,
+							"src": "100:69:0",
+							"visibility": "public"
+						},
+						{
+							"canonicalName": "DataPlan",
+							"id": 13,
+							"members": [
+								{
+									"constant": false,
+									"id": 12,
+									"mutability": "mutable",
+									"name": "unitPrice",
+									"nameLocation": "201:9:0",
+									"nodeType": "VariableDeclaration",
+									"scope": 13,
+									"src": "193:17:0",
+									"stateVariable": false,
+									"storageLocation": "default",
+									"typeDescriptions": {
+										"typeIdentifier": "t_uint256",
+										"typeString": "uint256"
+									},
+									"typeName": {
+										"id": 11,
+										"name": "uint256",
+										"nodeType": "ElementaryTypeName",
+										"src": "193:7:0",
+										"typeDescriptions": {
+											"typeIdentifier": "t_uint256",
+											"typeString": "uint256"
+										}
+									},
+									"visibility": "internal"
+								}
+							],
+							"name": "DataPlan",
+							"nameLocation": "178:8:0",
+							"nodeType": "StructDefinition",
+							"scope": 29,
+							"src": "171:62:0",
+							"visibility": "public"
+						},
+						{
+							"canonicalName": "Bill",
+							"id": 28,
+							"members": [
+								{
+									"constant": false,
+									"id": 15,
+									"mutability": "mutable",
+									"name": "node",
+									"nameLocation": "261:4:0",
+									"nodeType": "VariableDeclaration",
+									"scope": 28,
+									"src": "253:12:0",
+									"stateVariable": false,
+									"storageLocation": "default",
+									"typeDescriptions": {
+										"typeIdentifier": "t_address",
+										"typeString": "address"
+									},
+									"typeName": {
+										"id": 14,
+										"name": "address",
+										"nodeType": "ElementaryTypeName",
+										"src": "253:7:0",
+										"stateMutability": "nonpayable",
+										"typeDescriptions": {
+											"typeIdentifier": "t_address",
+											"typeString": "address"
+										}
+									},
+									"visibility": "internal"
+								},
+								{
+									"constant": false,
+									"id": 17,
+									"mutability": "mutable",
+									"name": "client",
+									"nameLocation": "279:6:0",
+									"nodeType": "VariableDeclaration",
+									"scope": 28,
+									"src": "271:14:0",
+									"stateVariable": false,
+									"storageLocation": "default",
+									"typeDescriptions": {
+										"typeIdentifier": "t_address",
+										"typeString": "address"
+									},
+									"typeName": {
+										"id": 16,
+										"name": "address",
+										"nodeType": "ElementaryTypeName",
+										"src": "271:7:0",
+										"stateMutability": "nonpayable",
+										"typeDescriptions": {
+											"typeIdentifier": "t_address",
+											"typeString": "address"
+										}
+									},
+									"visibility": "internal"
+								},
+								{
+									"constant": false,
+									"id": 20,
+									"mutability": "mutable",
+									"name": "dataPlan",
+									"nameLocation": "300:8:0",
+									"nodeType": "VariableDeclaration",
+									"scope": 28,
+									"src": "291:17:0",
+									"stateVariable": false,
+									"storageLocation": "default",
+									"typeDescriptions": {
+										"typeIdentifier": "t_struct$_DataPlan_$13_storage_ptr",
+										"typeString": "struct DataPlan"
+									},
+									"typeName": {
+										"id": 19,
+										"nodeType": "UserDefinedTypeName",
+										"pathNode": {
+											"id": 18,
+											"name": "DataPlan",
+											"nameLocations": [
+												"291:8:0"
+											],
+											"nodeType": "IdentifierPath",
+											"referencedDeclaration": 13,
+											"src": "291:8:0"
+										},
+										"referencedDeclaration": 13,
+										"src": "291:8:0",
+										"typeDescriptions": {
+											"typeIdentifier": "t_struct$_DataPlan_$13_storage_ptr",
+											"typeString": "struct DataPlan"
+										}
+									},
+									"visibility": "internal"
+								},
+								{
+									"constant": false,
+									"id": 23,
+									"mutability": "mutable",
+									"name": "payment",
+									"nameLocation": "322:7:0",
+									"nodeType": "VariableDeclaration",
+									"scope": 28,
+									"src": "314:15:0",
+									"stateVariable": false,
+									"storageLocation": "default",
+									"typeDescriptions": {
+										"typeIdentifier": "t_struct$_Payment_$10_storage_ptr",
+										"typeString": "struct Payment"
+									},
+									"typeName": {
+										"id": 22,
+										"nodeType": "UserDefinedTypeName",
+										"pathNode": {
+											"id": 21,
+											"name": "Payment",
+											"nameLocations": [
+												"314:7:0"
+											],
+											"nodeType": "IdentifierPath",
+											"referencedDeclaration": 10,
+											"src": "314:7:0"
+										},
+										"referencedDeclaration": 10,
+										"src": "314:7:0",
+										"typeDescriptions": {
+											"typeIdentifier": "t_struct$_Payment_$10_storage_ptr",
+											"typeString": "struct Payment"
+										}
+									},
+									"visibility": "internal"
+								},
+								{
+									"constant": false,
+									"id": 25,
+									"mutability": "mutable",
+									"name": "usedAmount",
+									"nameLocation": "343:10:0",
+									"nodeType": "VariableDeclaration",
+									"scope": 28,
+									"src": "335:18:0",
+									"stateVariable": false,
+									"storageLocation": "default",
+									"typeDescriptions": {
+										"typeIdentifier": "t_uint256",
+										"typeString": "uint256"
+									},
+									"typeName": {
+										"id": 24,
+										"name": "uint256",
+										"nodeType": "ElementaryTypeName",
+										"src": "335:7:0",
+										"typeDescriptions": {
+											"typeIdentifier": "t_uint256",
+											"typeString": "uint256"
+										}
+									},
+									"visibility": "internal"
+								},
+								{
+									"constant": false,
+									"id": 27,
+									"mutability": "mutable",
+									"name": "nonce",
+									"nameLocation": "367:5:0",
+									"nodeType": "VariableDeclaration",
+									"scope": 28,
+									"src": "359:13:0",
+									"stateVariable": false,
+									"storageLocation": "default",
+									"typeDescriptions": {
+										"typeIdentifier": "t_uint256",
+										"typeString": "uint256"
+									},
+									"typeName": {
+										"id": 26,
+										"name": "uint256",
+										"nodeType": "ElementaryTypeName",
+										"src": "359:7:0",
+										"typeDescriptions": {
+											"typeIdentifier": "t_uint256",
+											"typeString": "uint256"
+										}
+									},
+									"visibility": "internal"
+								}
+							],
+							"name": "Bill",
+							"nameLocation": "242:4:0",
+							"nodeType": "StructDefinition",
+							"scope": 29,
+							"src": "235:140:0",
+							"visibility": "public"
+						}
+					],
+					"src": "32:344:0"
+				},
+				"id": 0
+			}
+		}
+	}
+}
