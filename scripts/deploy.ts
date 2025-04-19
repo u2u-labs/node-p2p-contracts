@@ -1,13 +1,61 @@
 import { ethers } from "hardhat";
+import { writeFileSync } from "fs";
+import { join } from "path";
 
 async function main() {
-  const Lock = await ethers.getContractFactory("Lock");
-  const lock = await Lock.deploy(1234567890);
-  await lock.deployed();
-  console.log(`Lock deployed to: ${lock.address}`);
+  console.log("Starting deployment process...");
+
+  const [deployer] = await ethers.getSigners();
+  const deployerAddress = await deployer.getAddress();
+  console.log(`Deploying contracts with the account: ${deployerAddress}`);
+
+  const initialNodes = [deployerAddress];
+  console.log("Deploying NodesStorage contract...");
+  const NodesStorageFactory = await ethers.getContractFactory("NodesStorage");
+  const nodesStorage = await NodesStorageFactory.deploy(initialNodes);
+  await nodesStorage.waitForDeployment();
+  const nodesStorageAddress = await nodesStorage.getAddress();
+  console.log(`NodesStorage deployed to: ${nodesStorageAddress}`);
+
+  console.log("Deploying NodeDataPayment contract...");
+  const NodeDataPaymentFactory = await ethers.getContractFactory(
+    "NodeDataPayment"
+  );
+  const nodeDataPayment = await NodeDataPaymentFactory.deploy(
+    nodesStorageAddress
+  );
+  await nodeDataPayment.waitForDeployment();
+  const nodeDataPaymentAddress = await nodeDataPayment.getAddress();
+  console.log(`NodeDataPayment deployed to: ${nodeDataPaymentAddress}`);
+
+  const deploymentData = {
+    nodesStorage: nodesStorageAddress,
+    nodeDataPayment: nodeDataPaymentAddress,
+    network: (await ethers.provider.getNetwork()).name,
+    deployer: deployerAddress,
+    timestamp: new Date().toISOString(),
+  };
+
+  const deploymentsDir = join(__dirname, "..", "deployments");
+  const filePath = join(
+    deploymentsDir,
+    `deployment-${deploymentData.network}.json`
+  );
+
+  try {
+    writeFileSync(filePath, JSON.stringify(deploymentData, null, 2));
+    console.log(`Deployment information saved to ${filePath}`);
+  } catch (error) {
+    console.error("Failed to save deployment information:", error);
+  }
+
+  console.log("Deployment completed successfully!");
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+// Execute the deployment
+main()
+  .then(() => process.exit(0))
+  .catch((error) => {
+    console.error("Deployment failed:", error);
+    process.exit(1);
+  });
