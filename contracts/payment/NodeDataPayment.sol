@@ -18,7 +18,7 @@ contract NodeDataPayment is
 
     INodesStorage public nodesStorage;
 
-    mapping(address => uint256) nonces;
+    mapping(address => uint256) public nonces;
 
     event FulfillBill(
         address indexed node,
