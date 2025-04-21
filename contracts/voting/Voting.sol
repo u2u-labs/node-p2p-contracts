@@ -3,9 +3,11 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "contracts/interfaces/INodesStorage.sol";
+import "../interfaces/INodeAdmin.sol";
 
 contract Voting is Ownable {
     INodesStorage public nodeStorage;
+    INodeAdmin public nodeAdmin;
 
     uint256 public quorumThresholdPercent;
 
@@ -31,6 +33,10 @@ contract Voting is Ownable {
         quorumThresholdPercent = _initialQuorumPercent;
     }
 
+    function setNodeAdmin(address _nodeAdmin) external onlyOwner {
+        nodeAdmin = INodeAdmin(_nodeAdmin);
+    }
+
     modifier onlyNode() {
         require(nodeStorage.isValidNode(msg.sender), "Not a valid node");
         _;
@@ -53,7 +59,7 @@ contract Voting is Ownable {
             100;
 
         if (reportedNodes[nodeAddress] >= quorumCount) {
-            nodeStorage.removeNode(nodeAddress);
+            nodeAdmin.remove(nodeAddress);
             emit NodeRemoved(nodeAddress);
         }
     }
