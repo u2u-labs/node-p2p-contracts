@@ -3,11 +3,14 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "../interfaces/IVault.sol";
 import "./libraries/Types.sol";
 
 contract Vault is ReentrancyGuard, IVault, AccessControl {
+    using SafeERC20 for IERC20;
     // State variables
     uint32 public periodDuration = 86400; //1 day in seconds
     mapping(address => mapping(address => uint256)) private deposits;
@@ -99,17 +102,19 @@ contract Vault is ReentrancyGuard, IVault, AccessControl {
         bool success;
         if (tokenAddress == address(0)) {
             (success, ) = to.call{value: amount}("");
+            require(success, "Transfer failed");
         } else {
-            success = IERC20(tokenAddress).transferFrom(from, to, amount);
+            IERC20(tokenAddress).safeTransferFrom(address(this), to, amount);
         }
-
-        require(success, "Transfer failed");
 
         emit Transferred(from, to, amount);
     }
 
     // Deposit ETH into the vault
-    function deposit(uint256 amount, address tokenAddress) external payable {
+    function deposit(
+        uint256 amount,
+        address tokenAddress
+    ) external payable nonReentrant {
         if (tokenAddress == address(0)) {
             require(msg.value > 0, "Deposit amount must be greater than 0");
         } else {
@@ -120,14 +125,11 @@ contract Vault is ReentrancyGuard, IVault, AccessControl {
             deposits[msg.sender][tokenAddress] += msg.value;
         } else {
             deposits[msg.sender][tokenAddress] += amount;
-
-            bool success = IERC20(tokenAddress).transferFrom(
+            IERC20(tokenAddress).safeTransferFrom(
                 msg.sender,
                 address(this),
                 amount
             );
-
-            require(success, "Deposit failed");
         }
 
         emit Deposited(
