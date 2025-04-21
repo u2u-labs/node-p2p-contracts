@@ -4,7 +4,6 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "../interfaces/IVault.sol";
 import "./libraries/Types.sol";
@@ -119,13 +118,9 @@ contract Vault is ReentrancyGuard, IVault, AccessControl {
     ) external payable nonReentrant {
         if (tokenAddress == address(0)) {
             require(msg.value > 0, "Deposit amount must be greater than 0");
-        } else {
-            require(amount > 0, "Deposit amount must be greater than 0");
-        }
-
-        if (tokenAddress == address(0)) {
             deposits[msg.sender][tokenAddress] += msg.value;
         } else {
+            require(amount > 0, "Deposit amount must be greater than 0");
             deposits[msg.sender][tokenAddress] += amount;
             IERC20(tokenAddress).safeTransferFrom(
                 msg.sender,
