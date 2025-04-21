@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
 import "./BillValidator.sol";
 import "./PaymentProcessor.sol";
 import "./lib/LibTypes.sol";
@@ -12,11 +12,13 @@ contract NodeDataPayment is
     BillValidator,
     PaymentProcessor,
     ReentrancyGuard,
-    Ownable
+    AccessControl
 {
     using ECDSA for bytes32;
 
     INodesStorage public nodesStorage;
+
+    mapping(address => uint256) deposits;
 
     mapping(address => uint256) public nonces;
 
@@ -31,21 +33,28 @@ contract NodeDataPayment is
         uint256 nonce
     );
 
-    constructor(address nodesStorageAddress)
-        BillValidator("NodeDataPayment", "1")
-    {
+    constructor(
+        address nodesStorageAddress,
+        address admin
+    ) BillValidator("NodeDataPayment", "1") {
+        _setupRole(DEFAULT_ADMIN_ROLE, admin);
         nodesStorage = INodesStorage(nodesStorageAddress);
     }
 
-    function setNodeStorage(address nodesStorageAddress) external onlyOwner {
+    function setNodeStorage(
+        address nodesStorageAddress
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         nodesStorage = INodesStorage(nodesStorageAddress);
     }
 
-    function fulfillDataBill(Bill calldata bill, bytes calldata nodeSig)
-        external
-        payable
-        nonReentrant
-    {
+    function deposit() external payable nonReentrant {
+        deposits[msg.sender] += msg.value;
+    }
+
+    function fulfillDataBill(
+        Bill calldata bill,
+        bytes calldata nodeSig
+    ) external payable nonReentrant {
         address client = bill.client;
         address node = bill.node;
         uint256 nonce = bill.nonce;
