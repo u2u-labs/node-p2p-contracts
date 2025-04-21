@@ -22,19 +22,25 @@ contract Voting is Ownable {
     event NodeRemoved(address indexed removedNode);
     event QuorumThresholdUpdated(uint256 newThresholdPercent);
 
-    constructor(address _nodeStorageAddress, uint256 _initialQuorumPercent) {
-        require(_nodeStorageAddress != address(0), "Invalid storage address");
+    constructor(uint256 _initialQuorumPercent) {
         require(
             _initialQuorumPercent > 0 && _initialQuorumPercent <= 100,
             "Invalid quorum %"
         );
 
-        nodeStorage = INodesStorage(_nodeStorageAddress);
         quorumThresholdPercent = _initialQuorumPercent;
     }
 
     function setNodeAdmin(address _nodeAdmin) external onlyOwner {
+        require(_nodeAdmin != address(0), "Invalid node admin address");
+
         nodeAdmin = INodeAdmin(_nodeAdmin);
+    }
+
+    function setNodesStorage(address _nodeStorageAddress) external onlyOwner {
+        require(_nodeStorageAddress != address(0), "Invalid storage address");
+
+        nodeStorage = INodesStorage(_nodeStorageAddress);
     }
 
     modifier onlyNode() {

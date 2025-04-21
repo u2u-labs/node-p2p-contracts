@@ -35,19 +35,17 @@ describe("Voting Contract", function () {
 
     // Deploy voting contract
     const Voting = await ethers.getContractFactory("Voting");
-    voting = (await Voting.deploy(
-      nodeStorage.target,
-      INITIAL_QUORUM_PERCENT
-    )) as Voting;
+    voting = (await Voting.deploy(INITIAL_QUORUM_PERCENT)) as Voting;
     await voting.waitForDeployment();
+
+    await voting.connect(owner).setNodesStorage(nodeStorage.target);
 
     // Deploy node admin contract
     const NodeAdmin = await ethers.getContractFactory("NodeAdmin");
-    nodeAdmin = (await NodeAdmin.deploy(
-      voting.target,
-      nodeStorage.target
-    )) as NodeAdmin;
+    nodeAdmin = (await NodeAdmin.deploy()) as NodeAdmin;
     await nodeAdmin.waitForDeployment();
+    await nodeAdmin.connect(owner).setVoting(voting.target);
+    await nodeAdmin.connect(owner).setNodesStorage(nodeStorage.target);
 
     voting.connect(owner).setNodeAdmin(nodeAdmin.target);
 
@@ -71,20 +69,17 @@ describe("Voting Contract", function () {
 
     it("Should fail if deployed with invalid node storage address", async function () {
       const Voting = await ethers.getContractFactory("Voting");
-      await expect(
-        Voting.deploy(ZeroAddress, INITIAL_QUORUM_PERCENT)
-      ).to.be.revertedWith("Invalid storage address");
+      const voting = await Voting.deploy(INITIAL_QUORUM_PERCENT);
+      await expect(voting.setNodesStorage(ZeroAddress)).to.be.revertedWith(
+        "Invalid storage address"
+      );
     });
 
     it("Should fail if deployed with invalid quorum percent", async function () {
       const Voting = await ethers.getContractFactory("Voting");
-      await expect(Voting.deploy(nodeStorage.target, 0)).to.be.revertedWith(
-        "Invalid quorum %"
-      );
+      await expect(Voting.deploy(0)).to.be.revertedWith("Invalid quorum %");
 
-      await expect(Voting.deploy(nodeStorage.target, 101)).to.be.revertedWith(
-        "Invalid quorum %"
-      );
+      await expect(Voting.deploy(101)).to.be.revertedWith("Invalid quorum %");
     });
   });
 

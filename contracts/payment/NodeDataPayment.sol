@@ -2,14 +2,14 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "./SessionValidator.sol";
 import "./libraries/Types.sol";
 import "../interfaces/INodesStorage.sol";
 import "../interfaces/IVault.sol";
 import "../libraries/BokkyPooBahsDateTimeLibrary.sol";
 
-contract NodeDataPayment is SessionValidator, ReentrancyGuard, AccessControl {
+contract NodeDataPayment is SessionValidator, ReentrancyGuard, Ownable {
     INodesStorage public nodesStorage;
     IVault public vault;
 
@@ -32,25 +32,23 @@ contract NodeDataPayment is SessionValidator, ReentrancyGuard, AccessControl {
     );
 
     constructor(
-        address admin,
         address nodesStorageAddress,
         address vaultAddress
     ) SessionValidator("NodeDataPayment", "1") {
-        _setupRole(DEFAULT_ADMIN_ROLE, admin);
         nodesStorage = INodesStorage(nodesStorageAddress);
         vault = IVault(vaultAddress);
     }
 
-    function setNodeStorage(
-        address nodesStorageAddress
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        nodesStorage = INodesStorage(nodesStorageAddress);
+    function setNodeStorage(address _nodesStorage) external onlyOwner {
+        require(_nodesStorage != address(0), "Invalid nodes storage address");
+
+        nodesStorage = INodesStorage(_nodesStorage);
     }
 
-    function setVault(
-        address vaultAddress
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        vault = IVault(vaultAddress);
+    function setVault(address _vault) external onlyOwner {
+        require(_vault != address(0), "Invalid vault address");
+
+        vault = IVault(_vault);
     }
 
     function getSession(

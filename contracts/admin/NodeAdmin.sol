@@ -1,14 +1,22 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "../interfaces/INodesStorage.sol";
 
-contract NodeAdmin {
+contract NodeAdmin is Ownable {
     address public voting;
     INodesStorage public storageContract;
 
-    constructor(address _voting, address _storage) {
+    function setVoting(address _voting) external onlyOwner {
+        require(_voting != address(0), "Zero address");
+
         voting = _voting;
+    }
+
+    function setNodesStorage(address _storage) external onlyOwner {
+        require(_storage != address(0), "Zero address");
+
         storageContract = INodesStorage(_storage);
     }
 
