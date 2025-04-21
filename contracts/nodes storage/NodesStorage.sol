@@ -6,6 +6,8 @@ import "contracts/interfaces/INodesStorage.sol";
 
 contract NodesStorage is Ownable, INodesStorage {
     mapping(address => bool) private _isNode;
+    mapping(address => bool) private _removedNodes;
+    mapping(address => bool) private _nodeExistsInList;
     address[] private _nodeList;
 
     event NodeAdded(address indexed node);
@@ -67,15 +69,27 @@ contract NodesStorage is Ownable, INodesStorage {
 
     function removeNode(address node) external onlyOwner {
         require(_isNode[node], "NodeStorage: Node not found");
+
         _isNode[node] = false;
+        _removedNodes[node] = true;
+
         emit NodeRemoved(node);
     }
 
     function _addNode(address node) internal {
-        if (!_isNode[node]) {
-            _isNode[node] = true;
-            _nodeList.push(node);
-            emit NodeAdded(node);
+        require(!_isNode[node], "NodeStorage: Node already added");
+
+        if (!_removedNodes[node]) {
+            if (!_nodeExistsInList[node]) {
+                _nodeList.push(node);
+                _nodeExistsInList[node] = true;
+            }
+        } else {
+            _removedNodes[node] = false;
         }
+
+        _isNode[node] = true;
+
+        emit NodeAdded(node);
     }
 }

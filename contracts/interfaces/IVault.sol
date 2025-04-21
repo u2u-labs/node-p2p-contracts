@@ -7,5 +7,5 @@ interface IVault {
         address to,
         address tokenAddress,
         uint256 amount
-    ) external;
+    ) external returns (bool);
 }

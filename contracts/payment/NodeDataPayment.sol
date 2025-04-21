@@ -3,42 +3,42 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
-import "./BillValidator.sol";
-import "./PaymentProcessor.sol";
-import "./lib/LibTypes.sol";
+import "./SessionValidator.sol";
+import "./libraries/Types.sol";
 import "../interfaces/INodesStorage.sol";
+import "../interfaces/IVault.sol";
+import "../libraries/BokkyPooBahsDateTimeLibrary.sol";
 
-contract NodeDataPayment is
-    BillValidator,
-    PaymentProcessor,
-    ReentrancyGuard,
-    AccessControl
-{
-    using ECDSA for bytes32;
-
+contract NodeDataPayment is SessionValidator, ReentrancyGuard, AccessControl {
     INodesStorage public nodesStorage;
+    IVault public vault;
 
-    mapping(address => uint256) deposits;
+    mapping(address => LibSession.Session) private sessions;
 
     mapping(address => uint256) public nonces;
 
-    event FulfillBill(
+    event SessionStarted(
         address indexed node,
         address indexed client,
-        TokenType tokenType,
-        address tokenAddress,
-        uint256 unitPrice,
-        uint256 usedAmount,
-        uint256 totalPrice,
+        uint256 timestamp,
+        uint256 nonce
+    );
+
+    event SessionEnded(
+        address indexed node,
+        address indexed client,
+        uint256 timestamp,
         uint256 nonce
     );
 
     constructor(
+        address admin,
         address nodesStorageAddress,
-        address admin
-    ) BillValidator("NodeDataPayment", "1") {
+        address vaultAddress
+    ) SessionValidator("NodeDataPayment", "1") {
         _setupRole(DEFAULT_ADMIN_ROLE, admin);
         nodesStorage = INodesStorage(nodesStorageAddress);
+        vault = IVault(vaultAddress);
     }
 
     function setNodeStorage(
@@ -47,49 +47,91 @@ contract NodeDataPayment is
         nodesStorage = INodesStorage(nodesStorageAddress);
     }
 
-    function deposit() external payable nonReentrant {
-        deposits[msg.sender] += msg.value;
+    function setVault(
+        address vaultAddress
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        vault = IVault(vaultAddress);
     }
 
-    function fulfillDataBill(
-        Bill calldata bill,
+    function getSession(
+        address client
+    ) external view returns (LibSession.Session memory session) {
+        return sessions[client];
+    }
+
+    function startSession(
+        LibSession.Session calldata session,
         bytes calldata nodeSig
-    ) external payable nonReentrant {
-        address client = bill.client;
-        address node = bill.node;
-        uint256 nonce = bill.nonce;
+    ) external {
+        address node = session.node;
 
-        require(msg.sender == client, "Invalid client address");
         require(nodesStorage.isValidNode(node), "Node not registered");
+        require(
+            sessions[msg.sender].node == address(0),
+            "Session already started"
+        );
+        require(session.nonce == nonces[msg.sender], "Invalid session nonce");
 
-        require(nonce == nonces[client], "Invalid nonce");
-
-        bytes32 digest = hashBill(bill);
+        bytes32 digest = hashSession(session);
         address signer = ECDSA.recover(digest, nodeSig);
         require(signer == node, "Signature mismatch");
 
-        uint256 unitPrice = bill.dataPlan.unitPrice;
-        uint256 usedAmount = bill.usedAmount;
+        sessions[msg.sender] = session;
+        nonces[msg.sender]++;
 
-        //Mark nonce used. Cient must pay latest bill in order to pay next bill
-        nonces[client]++;
-
-        uint256 totalPrice;
-        unchecked {
-            totalPrice = unitPrice * usedAmount;
-        }
-
-        processPayment(client, node, bill.payment, totalPrice);
-
-        emit FulfillBill(
+        emit SessionStarted(
             node,
-            client,
-            bill.payment.tokenType,
-            bill.payment.tokenAddress,
-            unitPrice,
-            usedAmount,
-            totalPrice,
-            nonce
+            msg.sender,
+            session.startTimestamp,
+            session.nonce
         );
+    }
+
+    function endSession(
+        address client,
+        uint256 usedDataAmount
+    ) external nonReentrant {
+        require(
+            nodesStorage.isValidNode(msg.sender),
+            "Caller is not a node or not registered"
+        );
+
+        LibSession.Session storage session = sessions[client];
+
+        require(session.node == msg.sender, "Invalid session");
+        require(
+            block.timestamp >= session.startTimestamp,
+            "Start timestamp is in future"
+        );
+
+        uint256 sessionDuration = block.timestamp - session.startTimestamp;
+
+        require(
+            sessionDuration >= BokkyPooBahsDateTimeLibrary.SECONDS_PER_DAY,
+            "Session duration must be at least 1 day"
+        );
+
+        uint256 totalPrice = session.payment.unitPrice * usedDataAmount;
+
+        processPayment(client, session.node, session.payment, totalPrice);
+
+        emit SessionEnded(session.node, client, block.timestamp, session.nonce);
+
+        delete sessions[client];
+    }
+
+    function processPayment(
+        address payer,
+        address receiver,
+        LibPayment.Payment memory payment,
+        uint256 amount
+    ) internal {
+        bool success = vault.transfer(
+            payer,
+            receiver,
+            payment.tokenAddress,
+            amount
+        );
+        require(success, "Payment transfer failed");
     }
 }

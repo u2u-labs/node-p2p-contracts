@@ -23,38 +23,38 @@ async function main() {
   });
   console.log("NodesStorage verified successfully");
 
-  console.log("Deploying NodeDataPayment contract...");
-  const NodeDataPaymentFactory = await ethers.getContractFactory(
-    "NodeDataPayment"
-  );
-  const nodeDataPayment = await NodeDataPaymentFactory.deploy(
-    nodesStorageAddress
-  );
-  await nodeDataPayment.waitForDeployment();
-  const nodeDataPaymentAddress = await nodeDataPayment.getAddress();
-  console.log(`NodeDataPayment deployed to: ${nodeDataPaymentAddress}`);
-  await run("verify:verify", {
-    address: nodeDataPaymentAddress,
-    constructorArguments: [nodesStorageAddress],
-  });
-  console.log("NodeDataPayment verified successfully");
+  // console.log("Deploying NodeDataPayment contract...");
+  // const NodeDataPaymentFactory = await ethers.getContractFactory(
+  //   "NodeDataPayment"
+  // );
+  // const nodeDataPayment = await NodeDataPaymentFactory.deploy(
+  //   nodesStorageAddress
+  // );
+  // await nodeDataPayment.waitForDeployment();
+  // const nodeDataPaymentAddress = await nodeDataPayment.getAddress();
+  // console.log(`NodeDataPayment deployed to: ${nodeDataPaymentAddress}`);
+  // await run("verify:verify", {
+  //   address: nodeDataPaymentAddress,
+  //   constructorArguments: [nodesStorageAddress],
+  // });
+  // console.log("NodeDataPayment verified successfully");
 
-  console.log("Deploying Voting contract...");
-  const VotingFactory = await ethers.getContractFactory("Voting");
-  const voting = await VotingFactory.deploy(nodesStorageAddress, 51);
-  await voting.waitForDeployment();
-  const votingAddress = await voting.getAddress();
-  console.log(`Voting deployed to: ${votingAddress}`);
-  await run("verify:verify", {
-    address: votingAddress,
-    constructorArguments: [nodesStorageAddress, 51],
-  });
-  console.log("Voting verified successfully");
+  // console.log("Deploying Voting contract...");
+  // const VotingFactory = await ethers.getContractFactory("Voting");
+  // const voting = await VotingFactory.deploy(nodesStorageAddress, 51);
+  // await voting.waitForDeployment();
+  // const votingAddress = await voting.getAddress();
+  // console.log(`Voting deployed to: ${votingAddress}`);
+  // await run("verify:verify", {
+  //   address: votingAddress,
+  //   constructorArguments: [nodesStorageAddress, 51],
+  // });
+  // console.log("Voting verified successfully");
 
   const deploymentData = {
     nodesStorage: nodesStorageAddress,
-    nodeDataPayment: nodeDataPaymentAddress,
-    voting: votingAddress,
+    // nodeDataPayment: nodeDataPaymentAddress,
+    // voting: votingAddress,
     network: (await ethers.provider.getNetwork()).name,
     deployer: deployerAddress,
     timestamp: new Date().toISOString(),

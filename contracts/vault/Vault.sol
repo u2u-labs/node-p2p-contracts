@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "../interfaces/IVault.sol";
 import "./libraries/Types.sol";
-import "./libraries/BokkyPooBahsDateTimeLibrary.sol";
+import "../libraries/BokkyPooBahsDateTimeLibrary.sol";
 
 contract Vault is ReentrancyGuard, IVault, AccessControl {
     using SafeERC20 for IERC20;
@@ -53,6 +53,10 @@ contract Vault is ReentrancyGuard, IVault, AccessControl {
         grantRole(DEPOSIT_OPERATOR_ROLE, account);
     }
 
+    function isDepositOperator(address account) external view returns (bool) {
+        return hasRole(DEPOSIT_OPERATOR_ROLE, account);
+    }
+
     // Set spending limit for the caller (client/user)
     function setSpendingLimit(SpendingLimit calldata spendingLimit) external {
         SpendingLimit memory newLimit = SpendingLimit({
@@ -84,7 +88,12 @@ contract Vault is ReentrancyGuard, IVault, AccessControl {
         address to,
         address tokenAddress,
         uint256 amount
-    ) external onlyRole(DEPOSIT_OPERATOR_ROLE) nonReentrant {
+    )
+        external
+        onlyRole(DEPOSIT_OPERATOR_ROLE)
+        nonReentrant
+        returns (bool success)
+    {
         uint256 balance = deposits[from][tokenAddress];
 
         // Process spending limit checks first
@@ -100,7 +109,6 @@ contract Vault is ReentrancyGuard, IVault, AccessControl {
         deposits[from][tokenAddress] = balance - amount;
 
         // Perform the transfer to the recipient
-        bool success;
         if (tokenAddress == address(0)) {
             (success, ) = to.call{value: amount}("");
             require(success, "Transfer failed");
