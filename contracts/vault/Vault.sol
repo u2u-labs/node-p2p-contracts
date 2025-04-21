@@ -8,6 +8,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "../interfaces/IVault.sol";
 import "./libraries/Types.sol";
+import "./libraries/BokkyPooBahsDateTimeLibrary.sol";
 
 contract Vault is ReentrancyGuard, IVault, AccessControl {
     using SafeERC20 for IERC20;
@@ -22,6 +23,7 @@ contract Vault is ReentrancyGuard, IVault, AccessControl {
     event Transferred(address from, address to, uint256 amount);
     event SpendingLimitSet(address indexed user, SpendingLimit limit);
     event SpendingLimitRemoved(address indexed user);
+    event PeriodReset(address indexed user);
 
     bytes32 public constant DEPOSIT_OPERATOR_ROLE =
         keccak256("DEPOSIT_OPERATOR_ROLE");
@@ -104,7 +106,7 @@ contract Vault is ReentrancyGuard, IVault, AccessControl {
             (success, ) = to.call{value: amount}("");
             require(success, "Transfer failed");
         } else {
-            IERC20(tokenAddress).safeTransferFrom(address(this), to, amount);
+            IERC20(tokenAddress).safeTransfer(to, amount);
         }
 
         emit Transferred(from, to, amount);
@@ -163,17 +165,24 @@ contract Vault is ReentrancyGuard, IVault, AccessControl {
         emit Withdrawn(msg.sender, amount);
     }
 
-    // Internal function to process and check the spending limit for a client
+    // Internal function to process and check the spending limit for a client using BokkyPooBah's DateTime
     function checkSpendingLimit(
         address client,
         uint256 amountToSpend
     ) internal {
         SpendingLimit storage spendingLimit = spendingLimits[client];
 
-        // Reset period if the current block timestamp is greater than the period end
-        if (block.timestamp > spendingLimit.periodStart + periodDuration) {
-            spendingLimit.periodStart = block.timestamp;
-            spendingLimit.spentInPeriod = 0;
+        // Check if the period has ended using DateTime library
+        uint256 periodEnd = BokkyPooBahsDateTimeLibrary.addSeconds(
+            spendingLimit.periodStart,
+            periodDuration
+        );
+
+        uint256 tolerance = 5; // 5 seconds tolerance
+        if (block.timestamp >= periodEnd + tolerance) {
+            spendingLimit.periodStart = block.timestamp; // Update the period start time to the current time block timestamp
+            spendingLimit.spentInPeriod = 0; // Reset spent amount if the period is over
+            emit PeriodReset(client);
         }
 
         // Check if the amount exceeds the per-session limit
