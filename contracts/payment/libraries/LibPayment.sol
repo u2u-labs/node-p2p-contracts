@@ -5,26 +5,20 @@ import "./Types.sol";
 
 library LibPayment {
     bytes32 private constant PAYMENT_TYPEHASH =
-        keccak256(
-            "Payment(uint8 tokenType,address tokenAddress,uint256 unitPrice)"
-        );
+        keccak256("Payment(address tokenAddress, uin256 pricePerSecond)");
 
     struct Payment {
-        TokenType tokenType;
         address tokenAddress;
-        uint256 unitPrice;
+        uint256 pricePerSecond;
     }
 
-    function hash(
-        Payment memory payment
-    ) internal pure returns (bytes32) {
+    function hash(Payment memory payment) internal pure returns (bytes32) {
         return
             keccak256(
                 abi.encode(
                     PAYMENT_TYPEHASH,
-                    payment.tokenType,
                     payment.tokenAddress,
-                    payment.unitPrice
+                    payment.pricePerSecond
                 )
             );
     }

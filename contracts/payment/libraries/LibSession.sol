@@ -7,13 +7,15 @@ import "./LibPayment.sol";
 library LibSession {
     bytes32 private constant SESSION_TYPEHASH =
         keccak256(
-            "Session(address node,Payment payment,uint256 startTimestamp,uint256 nonce)Payment(uint8 tokenType,address tokenAddress,uint256 unitPrice)"
+            "Session(string sessionId,address client,Payment payment,uint256 requestedSeconds,uint16 nonce)Payment(address tokenAddress, uin256 amount)"
         );
 
     struct Session {
-        address node;
+        string sessionId;
+        address client;
         LibPayment.Payment payment;
-        uint256 startTimestamp;
+        uint256 requestedSeconds;
+        bytes gatewaySignature;
         uint256 nonce;
     }
 
@@ -22,9 +24,10 @@ library LibSession {
             keccak256(
                 abi.encode(
                     SESSION_TYPEHASH,
-                    session.node,
+                    session.sessionId,
+                    session.client,
                     LibPayment.hash(session.payment),
-                    session.startTimestamp,
+                    session.requestedSeconds,
                     session.nonce
                 )
             );

@@ -2,15 +2,20 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
-import "../interfaces/IVault.sol";
 import "./libraries/Types.sol";
-import "../libraries/BokkyPooBahsDateTimeLibrary.sol";
+import "../interfaces/INodesStorage.sol";
 
-contract Vault is ReentrancyGuard, IVault, AccessControl {
+contract Vault is ReentrancyGuard, AccessControl, Pausable {
     using SafeERC20 for IERC20;
+
+    uint256 public constant TOLERANCE = 5; // 5 seconds tolerance
+
+    INodesStorage public nodesStorage;
+
     // State variables
     uint32 public periodDuration = 86400; //1 day in seconds
     mapping(address => mapping(address => uint256)) private deposits;
@@ -29,6 +34,21 @@ contract Vault is ReentrancyGuard, IVault, AccessControl {
 
     constructor() {
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+    }
+
+    function pause() external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _pause();
+    }
+
+    function unpause() external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _unpause();
+    }
+
+    function setNodesStorage(
+        address _nodesStorage
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(_nodesStorage != address(0), "Invalid nodes storage address");
+        nodesStorage = INodesStorage(_nodesStorage);
     }
 
     // Allow deposit operator to set the period duration for spending limits
@@ -92,8 +112,11 @@ contract Vault is ReentrancyGuard, IVault, AccessControl {
         external
         onlyRole(DEPOSIT_OPERATOR_ROLE)
         nonReentrant
+        whenNotPaused
         returns (bool success)
     {
+        // require(nodesStorage.isValidNode(to), "Invalid node address");
+
         uint256 balance = deposits[from][tokenAddress];
 
         // Process spending limit checks first
@@ -123,7 +146,7 @@ contract Vault is ReentrancyGuard, IVault, AccessControl {
     function deposit(
         uint256 amount,
         address tokenAddress
-    ) external payable nonReentrant {
+    ) external payable nonReentrant whenNotPaused {
         if (tokenAddress == address(0)) {
             require(msg.value > 0, "Deposit amount must be greater than 0");
             deposits[msg.sender][tokenAddress] += msg.value;
@@ -147,7 +170,7 @@ contract Vault is ReentrancyGuard, IVault, AccessControl {
     function withdraw(
         uint256 amount,
         address tokenAddress
-    ) external nonReentrant {
+    ) external nonReentrant whenNotPaused {
         uint256 balance = deposits[msg.sender][tokenAddress];
 
         require(amount > 0, "Withdrawal amount must be greater than 0");
@@ -159,11 +182,10 @@ contract Vault is ReentrancyGuard, IVault, AccessControl {
         bool success;
         if (tokenAddress == address(0)) {
             (success, ) = msg.sender.call{value: amount}("");
+            require(success, "Transfer failed");
         } else {
-            success = IERC20(tokenAddress).transfer(msg.sender, amount);
+            IERC20(tokenAddress).safeTransfer(msg.sender, amount);
         }
-
-        require(success, "Transfer failed");
 
         emit Withdrawn(msg.sender, amount);
     }
@@ -176,13 +198,9 @@ contract Vault is ReentrancyGuard, IVault, AccessControl {
         SpendingLimit storage spendingLimit = spendingLimits[client];
 
         // Check if the period has ended using DateTime library
-        uint256 periodEnd = BokkyPooBahsDateTimeLibrary.addSeconds(
-            spendingLimit.periodStart,
-            periodDuration
-        );
+        uint256 periodEnd = spendingLimit.periodStart + periodDuration;
 
-        uint256 tolerance = 5; // 5 seconds tolerance
-        if (block.timestamp >= periodEnd + tolerance) {
+        if (block.timestamp >= periodEnd + TOLERANCE) {
             spendingLimit.periodStart = block.timestamp; // Update the period start time to the current time block timestamp
             spendingLimit.spentInPeriod = 0; // Reset spent amount if the period is over
             emit PeriodReset(client);
