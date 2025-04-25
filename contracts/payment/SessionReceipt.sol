@@ -5,11 +5,11 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./libraries/Types.sol";
-import "./SessionReceiptValidator.sol";
+import "./libraries/LibSessionReceipt.sol";
 import "../interfaces/INodesStorage.sol";
 import "../interfaces/IUsageDepositor.sol";
 
-contract SessionReceipt is ReentrancyGuard, Ownable, SessionReceiptValidator {
+contract SessionReceipt is ReentrancyGuard, Ownable {
     INodesStorage public nodesStorage;
     IUsageDepositor public usageDepositor;
 
@@ -35,10 +35,7 @@ contract SessionReceipt is ReentrancyGuard, Ownable, SessionReceiptValidator {
         _;
     }
 
-    constructor(
-        address _nodesStorage,
-        address _usageDepositor
-    ) SessionReceiptValidator("SessionReceipt", "1") {
+    constructor(address _nodesStorage, address _usageDepositor) {
         nodesStorage = INodesStorage(_nodesStorage);
         usageDepositor = IUsageDepositor(_usageDepositor);
     }

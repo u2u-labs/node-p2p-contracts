@@ -11,11 +11,7 @@ import "./libraries/LibSessionReceipt.sol";
 import "./UsageOrderValidator.sol";
 import "../interfaces/INodesStorage.sol";
 
-contract UsageDepositor is
-    ReentrancyGuard,
-    Ownable,
-    UsageOrderValidator
-{
+contract UsageDepositor is ReentrancyGuard, Ownable, UsageOrderValidator {
     using SafeERC20 for IERC20;
 
     INodesStorage private nodesStorage;
@@ -46,7 +42,7 @@ contract UsageDepositor is
         address _usageBillingAdmin,
         address _sessionReceiptContract,
         address _nodesStorage
-    ) UsageOrderValidator("NodeDataPayment", "1") {
+    ) UsageOrderValidator("UsageDepositor", "1") {
         usageBillingAdmin = _usageBillingAdmin;
         sessionReceiptContract = _sessionReceiptContract;
         nodesStorage = INodesStorage(_nodesStorage);
