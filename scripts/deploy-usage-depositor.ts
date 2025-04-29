@@ -10,20 +10,30 @@ async function main() {
   const deployerAddress = await deployer.getAddress();
   console.log(`Deploying contracts with the account: ${deployerAddress}`);
 
-  console.log("Deploying NodeAdmin contract...");
-  const NodeAdminContractFactory = await ethers.getContractFactory("NodeAdmin");
-  const nodeAdmin = await NodeAdminContractFactory.deploy();
-  await nodeAdmin.waitForDeployment();
-  const nodeAdminAddress = await nodeAdmin.getAddress();
-  console.log(`NodeAdmin deployed to: ${nodeAdminAddress}`);
+  console.log("Deploying UsageDepositor contract...");
+  const UsageDepositorContractFactory = await ethers.getContractFactory(
+    "UsageDepositor"
+  );
+  const UsageDepositor = await UsageDepositorContractFactory.deploy(
+    "0x2743eEC46576f76f47334569074242F3D9a90B44",
+    ZeroAddress,
+    ZeroAddress
+  );
+  await UsageDepositor.waitForDeployment();
+  const UsageDepositorAddress = await UsageDepositor.getAddress();
+  console.log(`UsageDepositor deployed to: ${UsageDepositorAddress}`);
   await run("verify:verify", {
-    address: nodeAdminAddress,
-    constructorArguments: [],
+    address: UsageDepositorAddress,
+    constructorArguments: [
+      "0x2743eEC46576f76f47334569074242F3D9a90B44",
+      ZeroAddress,
+      ZeroAddress,
+    ],
   });
-  console.log("NodeAdmin verified successfully");
+  console.log("UsageDepositor verified successfully");
 
   const deploymentData = {
-    contractAddress: nodeAdminAddress,
+    contractAddress: UsageDepositorAddress,
     network: (await ethers.provider.getNetwork()).name,
     deployer: deployerAddress,
     timestamp: new Date().toISOString(),
@@ -32,7 +42,7 @@ async function main() {
   const deploymentsDir = join(__dirname, "..", "deployments");
   const filePath = join(
     deploymentsDir,
-    `deployment-node-admin-${deploymentData.network}.json`
+    `deployment-usage-depositor-${deploymentData.network}.json`
   );
 
   try {

@@ -1,7 +1,6 @@
 import { ethers, run } from "hardhat";
 import { writeFileSync } from "fs";
 import { join } from "path";
-import { ZeroAddress } from "ethers";
 
 async function main() {
   console.log("Starting deployment process...");
@@ -10,27 +9,27 @@ async function main() {
   const deployerAddress = await deployer.getAddress();
   console.log(`Deploying contracts with the account: ${deployerAddress}`);
 
-  console.log("Deploying NodeDataPayment contract...");
-  const NodeDataPaymentContractFactory = await ethers.getContractFactory(
-    "NodeDataPayment"
+  console.log("Deploying SessionReceipt contract...");
+  const SessionReceiptContractFactory = await ethers.getContractFactory(
+    "SessionReceipt"
   );
-  const nodesStorageAddress = ZeroAddress;
-  const vaultAddress = ZeroAddress;
-  const nodeDataPayment = await NodeDataPaymentContractFactory.deploy(
-    nodesStorageAddress,
-    vaultAddress
+  const nodeStorageAddress = "0x8B0b7E0c9C5a6B48F5bA0352713B85c2C4973B78";
+  const usageDespositorAddress = "0x87e02AD9676568F3DAA3eDd579b739CE2E39A50F";
+  const SessionReceipt = await SessionReceiptContractFactory.deploy(
+    nodeStorageAddress,
+    usageDespositorAddress
   );
-  await nodeDataPayment.waitForDeployment();
-  const nodeDataPaymentAddress = await nodeDataPayment.getAddress();
-  console.log(`NodeDataPayment deployed to: ${nodeDataPaymentAddress}`);
+  await SessionReceipt.waitForDeployment();
+  const SessionReceiptAddress = await SessionReceipt.getAddress();
+  console.log(`SessionReceipt deployed to: ${SessionReceiptAddress}`);
   await run("verify:verify", {
-    address: nodeDataPaymentAddress,
-    constructorArguments: [nodesStorageAddress, vaultAddress],
+    address: SessionReceiptAddress,
+    constructorArguments: [nodeStorageAddress, usageDespositorAddress],
   });
-  console.log("NodeDataPayment verified successfully");
+  console.log("SessionReceipt verified successfully");
 
   const deploymentData = {
-    contractAddress: nodeDataPaymentAddress,
+    contractAddress: SessionReceiptAddress,
     network: (await ethers.provider.getNetwork()).name,
     deployer: deployerAddress,
     timestamp: new Date().toISOString(),
@@ -39,7 +38,7 @@ async function main() {
   const deploymentsDir = join(__dirname, "..", "deployments");
   const filePath = join(
     deploymentsDir,
-    `deployment-node-data-payment-${deploymentData.network}.json`
+    `deployment-session-receipt-${deploymentData.network}.json`
   );
 
   try {

@@ -14,7 +14,7 @@ library LibSessionReceipt {
 
     bytes32 private constant SESSION_RECEIPT_TYPEHASH =
         keccak256(
-            "SessionReceipt(address client,address node,uint256 totalSecondsServed,uint8 tokenType,address tokenAddress,uint256 totalPrice,uint8 status,uint256 nonce)"
+            "SessionReceipt(address client,address node,uint256 totalSecondsServed,uint8 tokenType,address tokenAddress,uint8 status,uint256 nonce)"
         );
 
     struct SessionReceipt {
@@ -23,7 +23,6 @@ library LibSessionReceipt {
         uint256 totalSecondsServed;
         TokenType tokenType;
         address tokenAddress;
-        uint256 totalPrice;
         SessionReceiptStatus status;
         uint256 nonce;
     }
@@ -40,7 +39,6 @@ library LibSessionReceipt {
                     sessionReceipt.totalSecondsServed,
                     sessionReceipt.tokenType,
                     sessionReceipt.tokenAddress,
-                    sessionReceipt.totalPrice,
                     sessionReceipt.status,
                     sessionReceipt.nonce
                 )

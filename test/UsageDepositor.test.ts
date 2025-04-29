@@ -159,7 +159,7 @@ describe("UsageDepositor", function () {
 
     it("Should allow owner to change session receipt contract", async function () {
       await usageDepositor.setSessionReceiptContract(otherAccount.address);
-
+      await usageDepositor.addWhitelistedTokens([mockERC20.target]);
       // No direct getter, but can be tested via the modifier functionality
       const requestedSeconds = 3600;
       const totalPrice = ethers.parseEther("10");
@@ -525,11 +525,13 @@ describe("UsageDepositor", function () {
     });
   });
 
-  describe("settleUsageToNode", function () {
+  describe("settleUsageToNode", async function () {
     const requestedSeconds = 3600; // 1 hour
     const totalPrice = ethers.parseEther("10");
     const servedUsage = 1800; // Half hour actually used
     const paymentAmount = ethers.parseEther("5"); // Half of the payment
+
+    await usageDepositor.connect(owner).addWhitelistedTokens([mockERC20.target]);
 
     beforeEach(async function () {
       // First have client purchase some usage

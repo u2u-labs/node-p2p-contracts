@@ -6,7 +6,6 @@ interface IUsageDepositor {
         address client,
         address node,
         uint256 totalServedUsage,
-        address tokenAddress,
-        uint256 totalToken
+        address tokenAddress
     ) external;
 }

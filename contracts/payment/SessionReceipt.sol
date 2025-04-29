@@ -21,8 +21,7 @@ contract SessionReceipt is ReentrancyGuard, Ownable {
         address client,
         address node,
         uint256 totalSecondsServed,
-        address tokenAddress,
-        uint256 totalPrice
+        address tokenAddress
     );
 
     event SessionReceiptConfirmed(address client, address node, uint256 nonce);
@@ -51,17 +50,23 @@ contract SessionReceipt is ReentrancyGuard, Ownable {
         return nonces[client];
     }
 
+    function getLatestReceipt(
+        address client
+    ) public view returns (LibSessionReceipt.SessionReceipt memory receipt) {
+        if (nonces[client] > 0) {
+            uint256 latestReceiptNonce = nonces[client] - 1;
+            receipt = sessionsReceipts[client][latestReceiptNonce];
+        }
+    }
+
     function createSessionReceipt(
         address client,
         uint256 totalSecondsServed,
         address tokenAddress,
         TokenType tokenType,
-        uint256 pricePerSecond,
         uint256 nonce
     ) external nonReentrant onlyValidNode {
         require(nonce == nonces[client], "Invalid nonce");
-
-        uint256 totalPrice = totalSecondsServed * pricePerSecond;
 
         LibSessionReceipt.SessionReceipt
             memory sessionReceipt = LibSessionReceipt.SessionReceipt({
@@ -71,7 +76,6 @@ contract SessionReceipt is ReentrancyGuard, Ownable {
                 tokenType: tokenType,
                 tokenAddress: tokenAddress,
                 status: LibSessionReceipt.SessionReceiptStatus.PENDING,
-                totalPrice: totalPrice,
                 nonce: nonce
             });
 
@@ -82,8 +86,7 @@ contract SessionReceipt is ReentrancyGuard, Ownable {
             client,
             msg.sender,
             totalSecondsServed,
-            tokenAddress,
-            totalPrice
+            tokenAddress
         );
     }
 
@@ -130,8 +133,7 @@ contract SessionReceipt is ReentrancyGuard, Ownable {
             sessionReceipt.client,
             sessionReceipt.node,
             sessionReceipt.totalSecondsServed,
-            sessionReceipt.tokenAddress,
-            sessionReceipt.totalPrice
+            sessionReceipt.tokenAddress
         );
 
         sessionReceipt.status = LibSessionReceipt.SessionReceiptStatus.PAID;
