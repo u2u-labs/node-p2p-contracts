@@ -5,30 +5,9 @@ import "./Types.sol";
 import "./LibPayment.sol";
 
 library LibUsageOrder {
-    bytes32 private constant USAGE_ORDER_TYPEHASH =
-        keccak256(
-            "UsageOrder(address client,uint8 tokenType,address tokenAddress,uint256 requestedSeconds)"
-        );
-
     struct UsageOrder {
-        address client;
         TokenType tokenType;
         address tokenAddress;
         uint256 requestedSeconds;
-    }
-
-    function hash(
-        UsageOrder memory usageOrder
-    ) internal pure returns (bytes32) {
-        return
-            keccak256(
-                abi.encode(
-                    USAGE_ORDER_TYPEHASH,
-                    usageOrder.client,
-                    usageOrder.tokenType,
-                    usageOrder.tokenAddress,
-                    usageOrder.requestedSeconds
-                )
-            );
     }
 }

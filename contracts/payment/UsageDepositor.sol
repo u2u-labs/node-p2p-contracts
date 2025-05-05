@@ -8,10 +8,9 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "./libraries/Types.sol";
 import "./libraries/LibUsageOrder.sol";
 import "./libraries/LibSessionReceipt.sol";
-import "./UsageOrderValidator.sol";
 import "../interfaces/INodesStorage.sol";
 
-contract UsageDepositor is ReentrancyGuard, Ownable, UsageOrderValidator {
+contract UsageDepositor is ReentrancyGuard, Ownable {
     using SafeERC20 for IERC20;
 
     address public nodesStorage;
@@ -40,10 +39,7 @@ contract UsageDepositor is ReentrancyGuard, Ownable, UsageOrderValidator {
         _;
     }
 
-    constructor(
-        address _sessionReceiptContract,
-        address _nodesStorage
-    ) UsageOrderValidator("UsageDepositor", "1") {
+    constructor(address _sessionReceiptContract, address _nodesStorage) {
         sessionReceiptContract = _sessionReceiptContract;
         nodesStorage = _nodesStorage;
     }
@@ -94,7 +90,6 @@ contract UsageDepositor is ReentrancyGuard, Ownable, UsageOrderValidator {
     function purchaseUsage(
         LibUsageOrder.UsageOrder calldata usageOrder
     ) external payable nonReentrant {
-        address client = usageOrder.client;
         uint256 requestedSeconds = usageOrder.requestedSeconds;
         TokenType tokenType = usageOrder.tokenType;
         address tokenAddress = usageOrder.tokenAddress;
@@ -102,7 +97,6 @@ contract UsageDepositor is ReentrancyGuard, Ownable, UsageOrderValidator {
 
         require(whitelistedTokens[tokenAddress], "Token is not whitelisted");
         require(rewardPerSecond > 0, "Reward per second is not set");
-        require(client == msg.sender, "Client is not the caller");
         require(
             requestedSeconds > 0,
             "Requested seconds must be greater than 0"
