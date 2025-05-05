@@ -15,7 +15,6 @@ async function main() {
     "UsageDepositor"
   );
   const UsageDepositor = await UsageDepositorContractFactory.deploy(
-    "0x2743eEC46576f76f47334569074242F3D9a90B44",
     ZeroAddress,
     ZeroAddress
   );
@@ -24,11 +23,7 @@ async function main() {
   console.log(`UsageDepositor deployed to: ${UsageDepositorAddress}`);
   await run("verify:verify", {
     address: UsageDepositorAddress,
-    constructorArguments: [
-      "0x2743eEC46576f76f47334569074242F3D9a90B44",
-      ZeroAddress,
-      ZeroAddress,
-    ],
+    constructorArguments: [ZeroAddress, ZeroAddress],
   });
   console.log("UsageDepositor verified successfully");
 
