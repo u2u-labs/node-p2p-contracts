@@ -15,9 +15,7 @@ contract SessionReceipt is ReentrancyGuard, Ownable {
 
     mapping(address => mapping(uint256 => LibSessionReceipt.SessionReceipt))
         private sessionsReceipts;
-
     mapping(address => uint256) private nonces;
-
     mapping(address => mapping(address => mapping(uint256 => bool)))
         private isConfirmedNonce;
 
@@ -25,9 +23,9 @@ contract SessionReceipt is ReentrancyGuard, Ownable {
         address client,
         address node,
         uint256 totalSecondsServed,
-        address tokenAddress
+        address tokenAddress,
+        uint256 nonce
     );
-
     event SessionReceiptConfirmed(address client, address node, uint256 nonce);
     event SessionReceiptRedeemed(address client, address node, uint256 nonce);
 
@@ -62,21 +60,27 @@ contract SessionReceipt is ReentrancyGuard, Ownable {
         uint256 latestNonce = nonces[client];
         uint256 count = 0;
 
-        // Count confirmed nonces
-        for (uint256 i = 0; i < latestNonce; i++) {
+        for (uint256 i = 0; i < latestNonce; ) {
             if (isConfirmedNonce[client][node][i]) {
                 count++;
+            }
+            unchecked {
+                i++;
             }
         }
 
         uint256[] memory result = new uint256[](count);
         uint256 index = 0;
 
-        // Collect confirmed nonces
-        for (uint256 i = 0; i < latestNonce; i++) {
+        for (uint256 i = 0; i < latestNonce; ) {
             if (isConfirmedNonce[client][node][i]) {
                 result[index] = i;
-                index++;
+                unchecked {
+                    index++;
+                }
+            }
+            unchecked {
+                i++;
             }
         }
 
@@ -87,8 +91,7 @@ contract SessionReceipt is ReentrancyGuard, Ownable {
         address client
     ) public view returns (LibSessionReceipt.SessionReceipt memory receipt) {
         if (nonces[client] > 0) {
-            uint256 latestReceiptNonce = nonces[client] - 1;
-            receipt = sessionsReceipts[client][latestReceiptNonce];
+            receipt = sessionsReceipts[client][nonces[client] - 1];
         }
     }
 
@@ -119,7 +122,8 @@ contract SessionReceipt is ReentrancyGuard, Ownable {
             client,
             msg.sender,
             totalSecondsServed,
-            tokenAddress
+            tokenAddress,
+            nonce
         );
     }
 
@@ -127,6 +131,7 @@ contract SessionReceipt is ReentrancyGuard, Ownable {
         LibSessionReceipt.SessionReceipt
             storage sessionReceipt = sessionsReceipts[msg.sender][nonce];
 
+        require(sessionReceipt.client == msg.sender, "Only client can confirm");
         require(
             sessionReceipt.status ==
                 LibSessionReceipt.SessionReceiptStatus.PENDING,
