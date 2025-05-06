@@ -2,7 +2,6 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./libraries/Types.sol";
 import "./libraries/LibUsageOrder.sol";
@@ -11,12 +10,16 @@ import "../interfaces/INodesStorage.sol";
 import "../interfaces/IUsageDepositor.sol";
 
 contract SessionReceipt is ReentrancyGuard, Ownable {
-    INodesStorage public nodesStorage;
-    IUsageDepositor public usageDepositor;
+    address public nodesStorage;
+    address public usageDepositor;
 
     mapping(address => mapping(uint256 => LibSessionReceipt.SessionReceipt))
         private sessionsReceipts;
+
     mapping(address => uint256) private nonces;
+
+    mapping(address => mapping(address => mapping(uint256 => bool)))
+        private isConfirmedNonce;
 
     event SessionReceiptCreated(
         address client,
@@ -26,18 +29,19 @@ contract SessionReceipt is ReentrancyGuard, Ownable {
     );
 
     event SessionReceiptConfirmed(address client, address node, uint256 nonce);
+    event SessionReceiptRedeemed(address client, address node, uint256 nonce);
 
     modifier onlyValidNode() {
         require(
-            nodesStorage.isValidNode(msg.sender),
+            INodesStorage(nodesStorage).isValidNode(msg.sender),
             "Node is not whitelisted"
         );
         _;
     }
 
     constructor(address _nodesStorage, address _usageDepositor) {
-        nodesStorage = INodesStorage(_nodesStorage);
-        usageDepositor = IUsageDepositor(_usageDepositor);
+        nodesStorage = _nodesStorage;
+        usageDepositor = _usageDepositor;
     }
 
     function getSessionReceipt(
@@ -49,6 +53,34 @@ contract SessionReceipt is ReentrancyGuard, Ownable {
 
     function getNonce(address client) external view returns (uint256) {
         return nonces[client];
+    }
+
+    function getConfirmedNonces(
+        address client,
+        address node
+    ) external view returns (uint256[] memory) {
+        uint256 latestNonce = nonces[client];
+        uint256 count = 0;
+
+        // Count confirmed nonces
+        for (uint256 i = 0; i < latestNonce; i++) {
+            if (isConfirmedNonce[client][node][i]) {
+                count++;
+            }
+        }
+
+        uint256[] memory result = new uint256[](count);
+        uint256 index = 0;
+
+        // Collect confirmed nonces
+        for (uint256 i = 0; i < latestNonce; i++) {
+            if (isConfirmedNonce[client][node][i]) {
+                result[index] = i;
+                index++;
+            }
+        }
+
+        return result;
     }
 
     function getLatestReceipt(
@@ -104,6 +136,7 @@ contract SessionReceipt is ReentrancyGuard, Ownable {
         sessionReceipt.status = LibSessionReceipt
             .SessionReceiptStatus
             .CONFIRMED;
+        isConfirmedNonce[msg.sender][sessionReceipt.node][nonce] = true;
 
         emit SessionReceiptConfirmed(
             sessionReceipt.client,
@@ -116,29 +149,36 @@ contract SessionReceipt is ReentrancyGuard, Ownable {
         address client,
         uint256 nonce
     ) external onlyValidNode nonReentrant {
+        require(
+            isConfirmedNonce[client][msg.sender][nonce],
+            "Receipt is not confirmed"
+        );
+
         LibSessionReceipt.SessionReceipt
             storage sessionReceipt = sessionsReceipts[client][nonce];
 
         require(
             sessionReceipt.status ==
                 LibSessionReceipt.SessionReceiptStatus.CONFIRMED,
-            "Session receipt is not confirmed"
+            "Receipt status not CONFIRMED"
         );
         require(
             sessionReceipt.node == msg.sender,
-            "Sender is not node in session's receipt"
+            "Sender is not node in receipt"
         );
 
-        LibUsageOrder.SettleUsageToNodeRequest
-            memory settleUsageToNodeRequest = LibUsageOrder
-                .SettleUsageToNodeRequest({
-                    client: sessionReceipt.client,
-                    node: sessionReceipt.node,
-                    totalServedUsage: sessionReceipt.totalSecondsServed,
-                    tokenAddress: sessionReceipt.tokenAddress
-                });
+        IUsageDepositor(usageDepositor).settleUsageToNode(
+            LibUsageOrder.SettleUsageToNodeRequest({
+                client: sessionReceipt.client,
+                node: sessionReceipt.node,
+                totalServedUsage: sessionReceipt.totalSecondsServed,
+                tokenAddress: sessionReceipt.tokenAddress
+            })
+        );
 
-        usageDepositor.settleUsageToNode(settleUsageToNodeRequest);
         sessionReceipt.status = LibSessionReceipt.SessionReceiptStatus.PAID;
+        isConfirmedNonce[client][msg.sender][nonce] = false;
+
+        emit SessionReceiptRedeemed(client, msg.sender, nonce);
     }
 }
