@@ -22,6 +22,11 @@ contract Voting is Ownable {
     event NodeRemoved(address indexed removedNode);
     event QuorumThresholdUpdated(uint256 newThresholdPercent);
 
+    modifier onlyNode() {
+        require(nodeStorage.isValidNode(msg.sender), "Not a valid node");
+        _;
+    }
+
     constructor(uint256 _initialQuorumPercent) {
         require(
             _initialQuorumPercent > 0 && _initialQuorumPercent <= 100,
@@ -41,11 +46,6 @@ contract Voting is Ownable {
         require(_nodeStorageAddress != address(0), "Invalid storage address");
 
         nodeStorage = INodesStorage(_nodeStorageAddress);
-    }
-
-    modifier onlyNode() {
-        require(nodeStorage.isValidNode(msg.sender), "Not a valid node");
-        _;
     }
 
     function reportNode(address nodeAddress) external onlyNode {

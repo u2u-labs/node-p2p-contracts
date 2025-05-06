@@ -14,6 +14,5 @@ library LibUsageOrder {
         address node;
         uint256 totalServedUsage;
         address tokenAddress;
-        uint256 nonce;
     }
 }

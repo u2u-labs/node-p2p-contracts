@@ -23,8 +23,6 @@ contract UsageDepositor is ReentrancyGuard, Pausable, Ownable {
     mapping(address => uint256) private rewardPerSecondPerToken;
     mapping(address => uint256) private tokenBalances;
     mapping(address => uint256) private clientUsages;
-    mapping(address => mapping(address => uint256))
-        public requestNoncePerClientNode;
 
     event UsagePurchased(address client, uint256 totalPrice, uint256 usage);
     event UsageSettledToNode(
@@ -142,7 +140,6 @@ contract UsageDepositor is ReentrancyGuard, Pausable, Ownable {
         address client = request.client;
         uint256 totalServedUsage = request.totalServedUsage;
         address tokenAddress = request.tokenAddress;
-        uint256 nonce = request.nonce;
         uint256 rewardPerSecond = rewardPerSecondPerToken[tokenAddress];
         bool isValidNode = INodesStorage(nodesStorage).isValidNode(node);
         uint256 totalPrice = totalServedUsage * rewardPerSecond;
@@ -154,15 +151,10 @@ contract UsageDepositor is ReentrancyGuard, Pausable, Ownable {
         require(whitelistedTokens[tokenAddress], "Token is not whitelisted");
         require(rewardPerSecond > 0, "Reward per second is not set");
         require(
-            requestNoncePerClientNode[client][node] == nonce,
-            "Invalid nonce"
-        );
-        require(
             tokenBalances[tokenAddress] >= totalPrice,
             "Insufficient token balance"
         );
 
-        requestNoncePerClientNode[client][node]++;
         clientUsages[client] -= totalServedUsage;
         tokenBalances[tokenAddress] -= totalPrice;
 

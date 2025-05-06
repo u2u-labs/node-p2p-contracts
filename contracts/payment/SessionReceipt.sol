@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./libraries/Types.sol";
+import "./libraries/LibUsageOrder.sol";
 import "./libraries/LibSessionReceipt.sol";
 import "../interfaces/INodesStorage.sol";
 import "../interfaces/IUsageDepositor.sol";
@@ -128,14 +129,16 @@ contract SessionReceipt is ReentrancyGuard, Ownable {
             "Sender is not node in session's receipt"
         );
 
-        // Move external call before the state update
-        usageDepositor.settleUsageToNode(
-            sessionReceipt.client,
-            sessionReceipt.node,
-            sessionReceipt.totalSecondsServed,
-            sessionReceipt.tokenAddress
-        );
+        LibUsageOrder.SettleUsageToNodeRequest
+            memory settleUsageToNodeRequest = LibUsageOrder
+                .SettleUsageToNodeRequest({
+                    client: sessionReceipt.client,
+                    node: sessionReceipt.node,
+                    totalServedUsage: sessionReceipt.totalSecondsServed,
+                    tokenAddress: sessionReceipt.tokenAddress
+                });
 
+        usageDepositor.settleUsageToNode(settleUsageToNodeRequest);
         sessionReceipt.status = LibSessionReceipt.SessionReceiptStatus.PAID;
     }
 }
