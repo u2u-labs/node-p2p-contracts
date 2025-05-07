@@ -16,15 +16,15 @@ contract SessionReceipt is ReentrancyGuard, Ownable {
     mapping(address => mapping(uint256 => LibSessionReceipt.SessionReceipt))
         private sessionsReceipts;
     mapping(address => uint256) private nonces;
-    mapping(address => mapping(address => mapping(uint256 => bool)))
-        private isConfirmedNonce;
+
+    // Efficient tracking of confirmed receipts
+    mapping(address => mapping(address => uint256[])) private confirmedNonces;
 
     event SessionReceiptCreated(
         address client,
         address node,
         uint256 totalSecondsServed,
-        address tokenAddress,
-        uint256 nonce
+        address tokenAddress
     );
     event SessionReceiptConfirmed(address client, address node, uint256 nonce);
     event SessionReceiptRedeemed(address client, address node, uint256 nonce);
@@ -57,41 +57,15 @@ contract SessionReceipt is ReentrancyGuard, Ownable {
         address client,
         address node
     ) external view returns (uint256[] memory) {
-        uint256 latestNonce = nonces[client];
-        uint256 count = 0;
-
-        for (uint256 i = 0; i < latestNonce; ) {
-            if (isConfirmedNonce[client][node][i]) {
-                count++;
-            }
-            unchecked {
-                i++;
-            }
-        }
-
-        uint256[] memory result = new uint256[](count);
-        uint256 index = 0;
-
-        for (uint256 i = 0; i < latestNonce; ) {
-            if (isConfirmedNonce[client][node][i]) {
-                result[index] = i;
-                unchecked {
-                    index++;
-                }
-            }
-            unchecked {
-                i++;
-            }
-        }
-
-        return result;
+        return confirmedNonces[client][node];
     }
 
     function getLatestReceipt(
         address client
     ) public view returns (LibSessionReceipt.SessionReceipt memory receipt) {
         if (nonces[client] > 0) {
-            receipt = sessionsReceipts[client][nonces[client] - 1];
+            uint256 latestReceiptNonce = nonces[client] - 1;
+            receipt = sessionsReceipts[client][latestReceiptNonce];
         }
     }
 
@@ -122,8 +96,7 @@ contract SessionReceipt is ReentrancyGuard, Ownable {
             client,
             msg.sender,
             totalSecondsServed,
-            tokenAddress,
-            nonce
+            tokenAddress
         );
     }
 
@@ -131,7 +104,14 @@ contract SessionReceipt is ReentrancyGuard, Ownable {
         LibSessionReceipt.SessionReceipt
             storage sessionReceipt = sessionsReceipts[msg.sender][nonce];
 
-        require(sessionReceipt.client == msg.sender, "Only client can confirm");
+        require(
+            sessionReceipt.client == msg.sender,
+            "Only client can confirm receipt"
+        );
+        require(
+            msg.sender == sessionReceipt.client,
+            "Only client can confirm receipt"
+        );
         require(
             sessionReceipt.status ==
                 LibSessionReceipt.SessionReceiptStatus.PENDING,
@@ -141,7 +121,7 @@ contract SessionReceipt is ReentrancyGuard, Ownable {
         sessionReceipt.status = LibSessionReceipt
             .SessionReceiptStatus
             .CONFIRMED;
-        isConfirmedNonce[msg.sender][sessionReceipt.node][nonce] = true;
+        confirmedNonces[msg.sender][sessionReceipt.node].push(nonce);
 
         emit SessionReceiptConfirmed(
             sessionReceipt.client,
@@ -154,22 +134,17 @@ contract SessionReceipt is ReentrancyGuard, Ownable {
         address client,
         uint256 nonce
     ) external onlyValidNode nonReentrant {
-        require(
-            isConfirmedNonce[client][msg.sender][nonce],
-            "Receipt is not confirmed"
-        );
-
         LibSessionReceipt.SessionReceipt
             storage sessionReceipt = sessionsReceipts[client][nonce];
 
         require(
             sessionReceipt.status ==
                 LibSessionReceipt.SessionReceiptStatus.CONFIRMED,
-            "Receipt status not CONFIRMED"
+            "Receipt not confirmed"
         );
         require(
             sessionReceipt.node == msg.sender,
-            "Sender is not node in receipt"
+            "Not the node in the receipt"
         );
 
         IUsageDepositor(usageDepositor).settleUsageToNode(
@@ -182,8 +157,23 @@ contract SessionReceipt is ReentrancyGuard, Ownable {
         );
 
         sessionReceipt.status = LibSessionReceipt.SessionReceiptStatus.PAID;
-        isConfirmedNonce[client][msg.sender][nonce] = false;
+        _removeConfirmedNonce(client, msg.sender, nonce);
 
         emit SessionReceiptRedeemed(client, msg.sender, nonce);
+    }
+
+    function _removeConfirmedNonce(
+        address client,
+        address node,
+        uint256 nonce
+    ) internal {
+        uint256[] storage noncesList = confirmedNonces[client][node];
+        for (uint256 i = 0; i < noncesList.length; i++) {
+            if (noncesList[i] == nonce) {
+                noncesList[i] = noncesList[noncesList.length - 1];
+                noncesList.pop();
+                break;
+            }
+        }
     }
 }
