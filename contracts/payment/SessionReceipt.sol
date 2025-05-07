@@ -16,18 +16,32 @@ contract SessionReceipt is ReentrancyGuard, Ownable {
     mapping(address => mapping(uint256 => LibSessionReceipt.SessionReceipt))
         private sessionsReceipts;
     mapping(address => uint256) private nonces;
-
-    // Efficient tracking of confirmed receipts
     mapping(address => mapping(address => uint256[])) private confirmedNonces;
+    mapping(address => mapping(address => mapping(uint256 => uint256)))
+        private confirmedNonceIndex;
 
     event SessionReceiptCreated(
-        address client,
-        address node,
+        address indexed client,
+        address indexed node,
         uint256 totalSecondsServed,
-        address tokenAddress
+        address tokenAddress,
+        uint256 nonce
     );
-    event SessionReceiptConfirmed(address client, address node, uint256 nonce);
-    event SessionReceiptRedeemed(address client, address node, uint256 nonce);
+    event SessionReceiptConfirmed(
+        address indexed client,
+        address indexed node,
+        uint256 nonce
+    );
+    event SessionReceiptRedeemed(
+        address indexed client,
+        address indexed node,
+        uint256 nonce
+    );
+    event SessionReceiptRejected(
+        address indexed client,
+        address indexed node,
+        uint256 nonce
+    );
 
     modifier onlyValidNode() {
         require(
@@ -39,6 +53,16 @@ contract SessionReceipt is ReentrancyGuard, Ownable {
 
     constructor(address _nodesStorage, address _usageDepositor) {
         nodesStorage = _nodesStorage;
+        usageDepositor = _usageDepositor;
+    }
+
+    function setNodesStorage(address _nodesStorage) external onlyOwner {
+        require(_nodesStorage != address(0), "Invalid address");
+        nodesStorage = _nodesStorage;
+    }
+
+    function setUsageDepositor(address _usageDepositor) external onlyOwner {
+        require(_usageDepositor != address(0), "Invalid address");
         usageDepositor = _usageDepositor;
     }
 
@@ -96,7 +120,8 @@ contract SessionReceipt is ReentrancyGuard, Ownable {
             client,
             msg.sender,
             totalSecondsServed,
-            tokenAddress
+            tokenAddress,
+            nonce
         );
     }
 
@@ -109,10 +134,6 @@ contract SessionReceipt is ReentrancyGuard, Ownable {
             "Only client can confirm receipt"
         );
         require(
-            msg.sender == sessionReceipt.client,
-            "Only client can confirm receipt"
-        );
-        require(
             sessionReceipt.status ==
                 LibSessionReceipt.SessionReceiptStatus.PENDING,
             "Session receipt is not pending"
@@ -121,9 +142,34 @@ contract SessionReceipt is ReentrancyGuard, Ownable {
         sessionReceipt.status = LibSessionReceipt
             .SessionReceiptStatus
             .CONFIRMED;
+        uint256 idx = confirmedNonces[msg.sender][sessionReceipt.node].length;
         confirmedNonces[msg.sender][sessionReceipt.node].push(nonce);
+        confirmedNonceIndex[msg.sender][sessionReceipt.node][nonce] = idx;
 
         emit SessionReceiptConfirmed(
+            sessionReceipt.client,
+            sessionReceipt.node,
+            sessionReceipt.nonce
+        );
+    }
+
+    function rejectSessionReceipt(uint256 nonce) external nonReentrant {
+        LibSessionReceipt.SessionReceipt
+            storage sessionReceipt = sessionsReceipts[msg.sender][nonce];
+
+        require(
+            sessionReceipt.client == msg.sender,
+            "Only client can reject receipt"
+        );
+        require(
+            sessionReceipt.status ==
+                LibSessionReceipt.SessionReceiptStatus.PENDING,
+            "Session receipt is not pending"
+        );
+
+        sessionReceipt.status = LibSessionReceipt.SessionReceiptStatus.EMPTY;
+
+        emit SessionReceiptRejected(
             sessionReceipt.client,
             sessionReceipt.node,
             sessionReceipt.nonce
@@ -168,12 +214,20 @@ contract SessionReceipt is ReentrancyGuard, Ownable {
         uint256 nonce
     ) internal {
         uint256[] storage noncesList = confirmedNonces[client][node];
-        for (uint256 i = 0; i < noncesList.length; i++) {
-            if (noncesList[i] == nonce) {
-                noncesList[i] = noncesList[noncesList.length - 1];
-                noncesList.pop();
-                break;
-            }
+        mapping(uint256 => uint256) storage indexMap = confirmedNonceIndex[
+            client
+        ][node];
+
+        uint256 index = indexMap[nonce];
+        uint256 lastIndex = noncesList.length - 1;
+
+        if (index != lastIndex) {
+            uint256 lastNonce = noncesList[lastIndex];
+            noncesList[index] = lastNonce;
+            indexMap[lastNonce] = index;
         }
+
+        noncesList.pop();
+        delete indexMap[nonce];
     }
 }
