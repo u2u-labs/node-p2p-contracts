@@ -48,21 +48,37 @@ contract UsageDepositor is ReentrancyGuard, Pausable, Ownable {
         nodesStorage = _nodesStorage;
     }
 
-    function getClientUsage(address client) public view returns (uint256) {
-        return clientUsages[client];
-    }
-
+    /**
+     * @notice Set session receipt contract address (called by owner)
+     * @param _sessionReceiptContract Session receipt contract address
+     */
     function setSessionReceiptContract(
         address _sessionReceiptContract
     ) public onlyOwner {
         sessionReceiptContract = _sessionReceiptContract;
     }
 
+    /**
+     * @notice Set nodes storage contract address (called by owner)
+     * @param _nodesStorage Nodes storage contract address
+     */
     function setNodesStorage(address _nodesStorage) public onlyOwner {
         require(_nodesStorage != address(0), "Invalid nodes storage address");
         nodesStorage = _nodesStorage;
     }
 
+    /**
+     * @notice Get remaining client's usage (unit: second)
+     * @param client Client address
+     */
+    function getClientUsage(address client) public view returns (uint256) {
+        return clientUsages[client];
+    }
+
+    /**
+     * @notice Add tokens to whitelist list (called by owner)
+     * @param tokens List of nodes addresses to add
+     */
     function addWhitelistedTokens(
         address[] calldata tokens
     ) external onlyOwner {
@@ -73,6 +89,10 @@ contract UsageDepositor is ReentrancyGuard, Pausable, Ownable {
         }
     }
 
+    /**
+     * @notice Remove token by address from whitelisted tokens list (called by owner)
+     * @param token Address of token to remove
+     */
     function removeWhitelistedToken(address token) external onlyOwner {
         require(whitelistedTokens[token], "Token is not whitelisted");
         delete whitelistedTokens[token];
@@ -80,6 +100,11 @@ contract UsageDepositor is ReentrancyGuard, Pausable, Ownable {
         emit TokenUnwhitelisted(token);
     }
 
+    /**
+     * @notice Set reward per second for a token (called by owner)
+     * @param token Address of token
+     * @param tokenAmount Amount of token to set as reward per second
+     */
     function setRewardPerSecond(
         address token,
         uint256 tokenAmount
@@ -88,10 +113,18 @@ contract UsageDepositor is ReentrancyGuard, Pausable, Ownable {
         rewardPerSecondPerToken[token] = tokenAmount;
     }
 
+    /**
+     * @notice Get reward per second for a token
+     * @param token Address of token
+     */
     function getRewardPerSecond(address token) external view returns (uint256) {
         return rewardPerSecondPerToken[token];
     }
 
+    /**
+     * @notice Purchase usage for a client
+     * @param usageOrder Usage order details to purchase
+     */
     function purchaseUsage(
         LibUsageOrder.UsageOrder calldata usageOrder
     ) external payable nonReentrant whenNotPaused {
@@ -133,6 +166,10 @@ contract UsageDepositor is ReentrancyGuard, Pausable, Ownable {
         emit UsagePurchased(msg.sender, totalPrice, requestedSeconds);
     }
 
+    /**
+     * @notice Settle usage to node (transfer client's deposit token to node) (called by SessionReceiptContract)
+     * @param request Request details to settle usage to node
+     */
     function settleUsageToNode(
         LibUsageOrder.SettleUsageToNodeRequest calldata request
     ) external onlySessionReceiptContract nonReentrant whenNotPaused {

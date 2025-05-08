@@ -56,16 +56,29 @@ contract SessionReceipt is ReentrancyGuard, Ownable {
         usageDepositor = _usageDepositor;
     }
 
+    /**
+     * @notice  Set nodes storage address (called by owner)
+     * @param _nodesStorage Nodes storage address
+     */
     function setNodesStorage(address _nodesStorage) external onlyOwner {
         require(_nodesStorage != address(0), "Invalid address");
         nodesStorage = _nodesStorage;
     }
 
+    /**
+     * @notice Set usage depositor address (called by owner)
+     * @param _usageDepositor Usage depositor address
+     */
     function setUsageDepositor(address _usageDepositor) external onlyOwner {
         require(_usageDepositor != address(0), "Invalid address");
         usageDepositor = _usageDepositor;
     }
 
+    /**
+     * @notice Get session receipt of client by nonce
+     * @param client Client address
+     * @param nonce Receipt's nonce
+     */
     function getSessionReceipt(
         address client,
         uint256 nonce
@@ -73,10 +86,19 @@ contract SessionReceipt is ReentrancyGuard, Ownable {
         return sessionsReceipts[client][nonce];
     }
 
+    /**
+     * @notice Get client latest nonce
+     * @param client Client address
+     */
     function getNonce(address client) external view returns (uint256) {
         return nonces[client];
     }
 
+    /**
+     * @notice Get list of confirmed receipts nonces
+     * @param client Client address
+     * @param node Node address
+     */
     function getConfirmedNonces(
         address client,
         address node
@@ -84,6 +106,10 @@ contract SessionReceipt is ReentrancyGuard, Ownable {
         return confirmedNonces[client][node];
     }
 
+    /**
+     * @notice Get client's latest receipt
+     * @param client Client address
+     */
     function getLatestReceipt(
         address client
     ) public view returns (LibSessionReceipt.SessionReceipt memory receipt) {
@@ -93,6 +119,14 @@ contract SessionReceipt is ReentrancyGuard, Ownable {
         }
     }
 
+    /**
+     * @notice Create session receipt (called by whitelisted nodes)
+     * @param client Client address that node serves
+     * @param totalSecondsServed Total seconds served by node for given client
+     * @param tokenAddress Token address of reward token
+     * @param tokenType Token type of reward token
+     * @param nonce Latest nonce of client (unused nonce)
+     */
     function createSessionReceipt(
         address client,
         uint256 totalSecondsServed,
@@ -125,6 +159,10 @@ contract SessionReceipt is ReentrancyGuard, Ownable {
         );
     }
 
+    /**
+     * @notice Confirm session receipt (change status of receipt to CONFIRMED) (called by client)
+     * @param nonce Receipt's nonce
+     */
     function confirmSessionReceipt(uint256 nonce) external nonReentrant {
         LibSessionReceipt.SessionReceipt
             storage sessionReceipt = sessionsReceipts[msg.sender][nonce];
@@ -153,6 +191,10 @@ contract SessionReceipt is ReentrancyGuard, Ownable {
         );
     }
 
+    /**
+     * @notice Reject session receipt (change status of receipt to REJECTED) (called by client)
+     * @param nonce Receipt's nonce
+     */
     function rejectSessionReceipt(uint256 nonce) external nonReentrant {
         LibSessionReceipt.SessionReceipt
             storage sessionReceipt = sessionsReceipts[msg.sender][nonce];
@@ -176,6 +218,11 @@ contract SessionReceipt is ReentrancyGuard, Ownable {
         );
     }
 
+    /**
+     * @notice Redeem receipt (change status of receipt to PAID, node receive rewards) (called by whitelisted nodes)
+     * @param client Receipt's client address
+     * @param nonce Receipt's nonce
+     */
     function redeemReceipt(
         address client,
         uint256 nonce
