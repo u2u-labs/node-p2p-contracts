@@ -12,7 +12,7 @@ This repository contains the contracts for the Node P2P project:
 
 # NodesStorage:
 
-- [Readme] (./contracts/nodes%20storage/README.md)
+- [Readme](./contracts/nodes%20storage/README.md)
 
 # Usage Depositor & Session Receipt Contracts
 
