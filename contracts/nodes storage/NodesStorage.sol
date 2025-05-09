@@ -13,16 +13,27 @@ contract NodesStorage is Ownable, INodesStorage {
     event NodeAdded(address indexed node);
     event NodeRemoved(address indexed node);
 
+    /**
+     * @dev Initializes the contract by adding the initial nodes.
+     * @param initialNodes The initial nodes to add.
+     */
     constructor(address[] memory initialNodes) {
         for (uint256 i = 0; i < initialNodes.length; i++) {
             _addNode(initialNodes[i]);
         }
     }
 
+    /**
+     * @notice Check if a node is valid.
+     * @param node The address of the node to check.
+     */
     function isValidNode(address node) external view override returns (bool) {
         return _isNode[node];
     }
 
+    /**
+     * @notice Get the list of valid nodes.
+     */
     function getValidNodes()
         external
         view
@@ -48,6 +59,9 @@ contract NodesStorage is Ownable, INodesStorage {
         }
     }
 
+    /**
+     * @notice Get the total number of valid nodes.
+     */
     function getTotalValidNodes()
         external
         view
@@ -61,12 +75,20 @@ contract NodesStorage is Ownable, INodesStorage {
         }
     }
 
+    /**
+     * @notice Add nodes to the list of valid nodes (called by owner).
+     * @param newNodes The addresses of the nodes to add.
+     */
     function addNodes(address[] calldata newNodes) external onlyOwner {
         for (uint256 i = 0; i < newNodes.length; i++) {
             _addNode(newNodes[i]);
         }
     }
 
+    /**
+     * @notice Remove a node from the list of valid nodes (called by owner).
+     * @param node The address of the node to remove.
+     */
     function removeNode(address node) external onlyOwner {
         require(_isNode[node], "NodeStorage: Node not found");
 
