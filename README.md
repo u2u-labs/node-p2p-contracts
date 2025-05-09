@@ -12,7 +12,9 @@ This repository contains the contracts for the Node P2P project:
 
 # NodesStorage:
 
-- [Readme](./contracts/nodes%20storage/README.md)
+The `NodesStorage` smart contract manages a registry of valid node addresses that are authorized to perform certain actions within a decentralized system (such as creating or redeeming session receipts). It is owned and controlled by an admin (typically a DAO or system operator) and is designed to be used by other contracts via the `INodesStorage` interface.
+
+- [Docs](./contracts/nodes%20storage/README.md)
 
 # Usage Depositor & Session Receipt Contracts
 

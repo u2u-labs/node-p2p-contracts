@@ -1,9 +1,5 @@
 # NodesStorage
 
-The `NodesStorage` smart contract manages a registry of valid node addresses that are authorized to perform certain actions within a decentralized system (such as creating or redeeming session receipts). It is owned and controlled by an admin (typically a DAO or system operator) and is designed to be used by other contracts via the `INodesStorage` interface.
-
----
-
 ## Overview
 
 This contract maintains:
