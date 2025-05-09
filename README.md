@@ -117,7 +117,7 @@ Used by other contracts (e.g. `SessionReceipt`) to check node validity.
 
 # Usage Depositor & Session Receipt Contracts
 
-This repository contains two core smart contracts for a decentralized usage-based payment system:
+Two core smart contracts for a decentralized usage-based payment system:
 
 - `UsageDepositor.sol`: Handles token deposits from clients in exchange for usage time, and manages token settlements to nodes.
 - `SessionReceipt.sol`: Enables nodes to create usage receipts, which clients confirm or reject, and nodes later redeem for token payouts.
