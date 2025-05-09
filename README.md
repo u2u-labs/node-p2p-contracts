@@ -6,6 +6,8 @@ This repository contains the contracts for the Node P2P project:
 ## Deploy contract 
 - Run: npx hardhat run scripts/deploy.ts --network <your_network>
 
+---
+
 # Usage Depositor & Session Receipt Contracts
 
 This repository contains two core smart contracts for a decentralized usage-based payment system:
@@ -117,9 +119,3 @@ Ensure that both contracts are aware of each other's addresses using `setUsageDe
    - Approves: `confirmSessionReceipt()`
    - Rejects: `rejectSessionReceipt()`
 4. If confirmed, node calls `redeemReceipt()` to get paid.
-
----
-
-## License
-
-[MIT](./LICENSE)
