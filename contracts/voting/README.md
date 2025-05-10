@@ -112,7 +112,7 @@ function updateRemovalDelay(uint256 newDelay) external onlyOwner
 
 ---
 
-## 🚨 Node Reporting Flow
+## Node Reporting Flow
 
 ### Step 1: A node reports another node
 
@@ -140,7 +140,7 @@ voting.reportNode(reportedNodeAddress); // called by a valid node
 
 ---
 
-## 🕒 Finalizing Node Removal
+## Finalizing Node Removal
 
 After the removal delay has passed:
 
@@ -162,7 +162,7 @@ voting.finalizeRemoval(reportedNodeAddress);
 
 ---
 
-## ✅ Example Walkthrough
+## Example Walkthrough
 
 | Step | Action | Actor | Outcome |
 |------|--------|-------|---------|
@@ -173,6 +173,5 @@ voting.finalizeRemoval(reportedNodeAddress);
 | 5 | Node C reports Node X | Node C | Quorum met → scheduled for removal |
 | 6 | Wait for delay (e.g., 1 hour) | — | — |
 | 7 | Node D finalizes removal | Node D | Node X is removed |
-
 
 ---
