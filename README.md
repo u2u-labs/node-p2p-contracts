@@ -17,6 +17,13 @@ The `NodesStorage` smart contract manages a registry of valid node addresses tha
 - [Contracts](./contracts/nodes%20storage)
 - [Document](./contracts/nodes%20storage/README.md)
 
+# Voting
+
+The `Voting` contract allows nodes to report misbehaving peers and, once a quorum is reached, schedule their removal after a delay. This ensures decentralized governance over a set of nodes managed by a separate `NodesStorage` contract.
+
+- [Contracts](./contracts/voting)
+- [Document](./contracts/voting/README.md)
+
 # Usage Depositor & Session Receipt
 
 Two core smart contracts for a decentralized usage-based payment system:

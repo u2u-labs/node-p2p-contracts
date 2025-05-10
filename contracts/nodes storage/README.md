@@ -5,7 +5,7 @@
 This contract maintains:
 
 - A list of currently valid node addresses.
-- The ability to add or remove nodes via the contract owner.
+- The ability to add nodes via the contract owner, remove nodes via the contract owner or operator.
 - Efficient tracking of which addresses have ever been added or removed.
 - Compatibility with other contracts via the `INodesStorage` interface.
 
@@ -13,9 +13,9 @@ This contract maintains:
 
 ## Constructor
 
-### `constructor(address[] memory initialNodes)`
+### `constructor(address[] memory initialNodes, admin _operator)`
 
-Initializes the contract with an optional list of valid node addresses.
+Initializes the contract with an optional list of valid node addresses, operator address.
 
 ---
 
@@ -23,7 +23,7 @@ Initializes the contract with an optional list of valid node addresses.
 
 - **Validation:** Check whether a node address is currently valid.
 - **Listing:** Get all currently valid nodes or their count.
-- **Management:** Only the owner can add or remove node addresses.
+- **Management:** Only the owner can add nodes. Only the owner or operator can remove nodes.
 - **Replay-safe List:** Maintains complete node list without duplicates.
 
 ---
@@ -54,7 +54,7 @@ Adds one or more new nodes. Ignores duplicates. Re-activates previously removed 
 
 ---
 
-### `function removeNode(address node) external onlyOwner`
+### `function removeNode(address node) external onlyAuthorized`
 
 Removes a node from the valid list. Marks it as removed and emits a `NodeRemoved` event.
 
@@ -70,6 +70,7 @@ Internal helper for adding a node. Prevents re-adding already active nodes. Hand
 
 ## State Variables
 
+- `address operator`: The address of the contract operator.
 - `mapping(address => bool) _isNode`: Tracks whether a node is currently valid.
 - `mapping(address => bool) _removedNodes`: Tracks whether a node was ever removed.
 - `mapping(address => bool) _nodeExistsInList`: Ensures a node appears only once in the `_nodeList`.
@@ -86,7 +87,8 @@ Internal helper for adding a node. Prevents re-adding already active nodes. Hand
 
 ## Access Control
 
-- Only the contract owner (via OpenZeppelin's `Ownable`) can add or remove nodes.
+- Only the contract owner (via OpenZeppelin's `Ownable`) can add nodes.
+- Only the contract owner (via OpenZeppelin's `Ownable`) or the operator (set by owner) can remove nodes.
 - View functions are publicly accessible.
 
 ---
