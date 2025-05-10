@@ -111,3 +111,68 @@ function updateRemovalDelay(uint256 newDelay) external onlyOwner
 - Minimum delay is 1 minute.
 
 ---
+
+## 🚨 Node Reporting Flow
+
+### Step 1: A node reports another node
+
+```solidity
+voting.reportNode(reportedNodeAddress); // called by a valid node
+```
+
+- Validations:
+  - Caller is a valid node.
+  - Target is also currently valid.
+  - Caller has not already reported this node.
+  - Node is not already scheduled for removal.
+
+- Effects:
+  - Increments `reportedNodes[reportedNodeAddress]`.
+  - Logs the report to prevent duplicates.
+
+### Step 2: Quorum check
+
+- After each report, the contract checks if the number of reports crosses the quorum threshold.
+- If quorum is reached:
+  - A removal timestamp is calculated using `block.timestamp + removalDelay`.
+  - `pendingRemovals[reportedNodeAddress]` is set.
+  - Event `NodeScheduledForRemoval` is emitted.
+
+---
+
+## 🕒 Finalizing Node Removal
+
+After the removal delay has passed:
+
+### Step 3: Any valid node can finalize
+
+```solidity
+voting.finalizeRemoval(reportedNodeAddress);
+```
+
+- Validations:
+  - Caller is a valid node.
+  - The node is in `pendingRemovals`.
+  - The current time exceeds the scheduled removal time.
+
+- Effects:
+  - Removes the node from `NodesStorage`.
+  - Deletes all tracking data for that node (`reportedNodes`, `pendingRemovals`).
+  - Emits `NodeRemoved`.
+
+---
+
+## ✅ Example Walkthrough
+
+| Step | Action | Actor | Outcome |
+|------|--------|-------|---------|
+| 1 | Add 5 nodes | Owner | Nodes added to NodesStorage |
+| 2 | Set quorum to 60% | Owner | Requires 3 reports |
+| 3 | Node A reports Node X | Node A | Report count = 1 |
+| 4 | Node B reports Node X | Node B | Report count = 2 |
+| 5 | Node C reports Node X | Node C | Quorum met → scheduled for removal |
+| 6 | Wait for delay (e.g., 1 hour) | — | — |
+| 7 | Node D finalizes removal | Node D | Node X is removed |
+
+
+---
