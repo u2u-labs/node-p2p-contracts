@@ -1,158 +1,168 @@
-# UsageDepositor Smart Contract
+# 📦 UsageDepositor Smart Contract
 
-A Solidity smart contract that manages usage-based payments for decentralized node services. It allows clients to deposit tokens (ERC20 or native), enforces maintain fee requirements, tracks daily free usage, and handles reward distribution to nodes based on bytes of data served.
-
----
-
-## 🧾 Features
-
-- ✅ Maintain fee enforcement for clients
-- ✅ Daily free usage quota (in bytes)
-- ✅ Reward per byte configuration per token
-- ✅ Support for both ERC20 tokens and native ETH
-- ✅ Secure deposit and reward settlement system
-- ✅ Role-restricted interaction for receipt settlement
-- ✅ Owner-only administration
+A secure and flexible usage-based payment system for decentralized data-serving networks. Clients prepay for data usage in tokens (native or ERC20), and verified nodes receive payouts based on served data. It includes features like daily free usage, maintain fee enforcement, and token reward rates per byte.
 
 ---
 
-## 📦 Contract Overview
+## 🛠 Features
 
-### `UsageDepositor`
-
-This contract:
-
-- Allows clients to deposit funds for usage.
-- Supports usage accounting by bytes.
-- Handles automated settlement to service-providing nodes.
-- Enforces maintain fee before usage is allowed.
-- Tracks and resets free usage daily per client.
-- Stores maintain fees inside the contract (retrievable via `withdraw()`).
+- Pay-per-byte usage model for clients
+- Support for both **native token** and **ERC20 tokens**
+- Daily **free usage limit** per client
+- **Maintain fee** required every 30 days
+- Secure **settlement to nodes** after data service
+- Configurable reward rate per byte/token
+- Token whitelist management
+- Emergency `pause/unpause` functions
+- Only authorized SessionReceiptContract can trigger settlements
 
 ---
 
-## 🛠 Deployment
+## 🧩 Dependencies
 
-### Constructor Parameters
+- [OpenZeppelin Contracts](https://github.com/OpenZeppelin/openzeppelin-contracts)
+- Custom libraries:
+  - `Types.sol`
+  - `LibUsageOrder.sol`
+- External contracts:
+  - `INodesStorage`
+  - `SessionReceipt`
+
+---
+
+## 🚀 Deployment
+
+### Constructor
 
 ```solidity
 constructor(address _sessionReceiptContract, address _nodesStorage)
 ```
 
-- `_sessionReceiptContract`: The authorized contract that can call `settleUsageToNode()`.
-- `_nodesStorage`: The contract that validates whether an address is a registered node.
+| Parameter                 | Description                           |
+|--------------------------|---------------------------------------|
+| `_sessionReceiptContract`| Contract to authorize usage settlement|
+| `_nodesStorage`          | Contract that manages valid node list |
 
 ---
 
-## 🔐 Roles & Permissions
+## ⚙️ Configuration (Owner-only)
 
-| Function               | Role                     |
-| ---------------------- | ------------------------ |
-| `settleUsageToNode()`  | `SessionReceiptContract` |
-| `withdraw()`           | `Owner`                  |
-| Admin config (setters) | `Owner`                  |
-| `payMaintainFee()`     | `Client`                 |
-| `purchaseUsage()`      | `Client`                 |
-
----
-
-## 💰 Payment & Reward Flow
-
-### Clients:
-
-1. **Pay Maintain Fee (Required Every 30 Days)**:
-
-   ```solidity
-   payMaintainFee()
-   ```
-
-2. **Purchase Usage by Byte**:
-
-   ```solidity
-   purchaseUsage(UsageOrder)
-   ```
-
-3. **UsageOrder Fields (via `LibUsageOrder.UsageOrder`)**:
-   - `tokenType`: Native or ERC20
-   - `tokenAddress`
-   - `requestedBytes`
-
-### Nodes:
-
-- Usage is reported and settled via `SessionReceiptContract`:
-
-  ```solidity
-  settleUsageToNode(SettleUsageToNodeRequest)
-  ```
-
-- They receive:
-  - **Paid usage** → in the same token deposited by client
-  - **Free usage** → in native token (ETH), from contract's balance
+| Function                             | Purpose                                  |
+|--------------------------------------|------------------------------------------|
+| `setDailyFreeUsage(uint256)`         | Set daily free byte quota per client     |
+| `setMaintainFee(uint256)`            | Set native token amount for maintenance  |
+| `setRewardPerByte(address, uint256)` | Set token amount paid per byte served    |
+| `addWhitelistedTokens(address[])`    | Add supported ERC20 tokens               |
+| `removeWhitelistedToken(address)`    | Remove supported token                   |
+| `setSessionReceiptContract(address)` | Update SessionReceipt contract           |
+| `setNodesStorage(address)`           | Update NodesStorage contract             |
+| `withdraw(address, address, uint256)`| Withdraw tokens or native balance        |
+| `pause()` / `unpause()`              | Emergency controls                       |
 
 ---
 
-## 🔄 Daily Free Usage
+## 👤 Client Functions
 
-- Clients receive a daily quota (`DAILY_FREE_USAGE`, default 500 KB).
-- Automatically reset once per day on first settlement.
-- Configurable by owner.
+### Pay Maintain Fee
 
----
+```solidity
+payMaintainFee() external payable
+```
 
-## ⚙️ Admin Functions
-
-- `setDailyFreeUsage(uint256)`
-- `setMaintainFee(uint256)`
-- `setRewardPerByte(address token, uint256)`
-- `addWhitelistedTokens(address[])`
-- `removeWhitelistedToken(address)`
-- `setSessionReceiptContract(address)`
-- `setNodesStorage(address)`
-- `withdraw(address token, address to, uint256 amount)`
+- Must pay `MAINTAIN_FEE` in native token
+- Required every 30 days to remain active
 
 ---
 
-## 🧪 Events
+### Purchase Usage
 
-- `UsagePurchased(client, totalPrice, usageBytes)`
-- `UsageSettledToNode(client, node, bytes, reward)`
-- `TokenWhitelisted(token)`
-- `TokenUnwhitelisted(token)`
-- `Withdrawn(token, to, amount)`
-- `MaintainFeePaid(payer, amount, timestamp)`
+```solidity
+purchaseUsage(LibUsageOrder.UsageOrder calldata usageOrder)
+```
 
----
-
-## 🔎 Example Flow
-
-1. Owner whitelists tokens and sets reward per byte.
-2. Client pays maintain fee.
-3. Client purchases 1 MB of usage with an ERC20 token.
-4. SessionReceiptContract settles usage:
-   - Node receives token for actual usage beyond free quota.
-   - Node receives native token for free bytes (if applicable).
-5. Owner can later withdraw collected fees or unused balances.
+- Pays in selected token for specified `requestedBytes`
+- Must have paid maintain fee beforehand
 
 ---
 
-## 🧱 Libraries and Interfaces
+### View Functions
 
-- [`SafeERC20`](https://docs.openzeppelin.com/contracts/4.x/api/token/erc20#SafeERC20)
-- [`ReentrancyGuard`](https://docs.openzeppelin.com/contracts/4.x/api/security#ReentrancyGuard)
-- [`Pausable`](https://docs.openzeppelin.com/contracts/4.x/api/security#Pausable)
-- `INodesStorage` — Interface to validate node addresses
-- `LibUsageOrder` — Structs and helper logic for usage orders
+| Function                                | Description                              |
+|-----------------------------------------|------------------------------------------|
+| `getClientUsage(address)`               | Returns total remaining bytes            |
+| `getClientFreeUsage(address)`           | Remaining free usage for the day         |
+| `isPaidMaintainFee(address)`            | Whether client is within fee window      |
+| `getRewardPerByte(address)`             | Reward rate for a token (per byte)       |
+
+---
+
+## 📤 Node Settlement
+
+### Called by `SessionReceiptContract`
+
+```solidity
+settleUsageToNode(LibUsageOrder.SettleUsageToNodeRequest calldata request)
+```
+
+- Validates node and usage
+- Deducts usage from client
+- Pays tokens to the node (and native token for free usage)
 
 ---
 
-## ⚠️ Security Notes
+## 🧾 Events
 
-- Free usage is paid out **only in native token** (ETH).
-- Maintain fee must be paid before any usage purchase.
-- ERC20 `rewardPerByte` must be carefully set based on token decimals.
-- Only the `SessionReceiptContract` can settle usage to nodes.
+| Event                      | Triggered When                                        |
+|---------------------------|--------------------------------------------------------|
+| `UsagePurchased`          | Client buys usage with tokens                          |
+| `UsageSettledToNode`      | Token payout is completed to a node                    |
+| `MaintainFeePaid`         | Client pays native token to activate service           |
+| `Withdrawn`               | Owner withdraws tokens or native funds                 |
+| `TokenWhitelisted`        | New token added for usage payments                     |
+| `TokenUnwhitelisted`      | Token removed from whitelist                           |
 
 ---
+
+## 🛡️ Errors (Custom)
+
+Some examples:
+- `UsageDepositor__MaintainFeeNotDueYet(...)`
+- `UsageDepositor__InsufficientTokenBalance(...)`
+- `UsageDepositor__TokenNotWhitelisted()`
+- `UsageDepositor__TransferTokenFailed(...)`
+- `UsageDepositor__InvalidCaller(...)`
+
+Use [custom errors](https://docs.soliditylang.org/en/latest/control-structures.html#custom-errors) for gas optimization.
+
+---
+
+## 🧪 Example Flow
+
+### 1. Client Setup
+- Pays native maintain fee: `payMaintainFee()`
+- Buys usage credits via `purchaseUsage()` with selected token
+
+### 2. Node Serves Client
+- Client submits a signed session receipt
+- `SessionReceiptContract` calls `settleUsageToNode()` to transfer payment to the node
+
+---
+
+## 🔐 Security Considerations
+
+- Only whitelisted tokens can be used for usage
+- Owner can pause the contract during emergencies
+- Settlement only by trusted `SessionReceiptContract`
+- Contract prevents reentrancy attacks
+
+---
+
+## ⛓️ Example Token Pricing
+
+If 1 token = 1e18 (like ETH), then:
+- `rewardPerByte = 1e12` → 1 KB costs 1e15 (0.001 token)
+- Set this via: `setRewardPerByte(token, 1e12)`
+
 
 # SessionReceipt Smart Contract
 
