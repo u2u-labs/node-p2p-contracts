@@ -7,12 +7,12 @@ library LibUsageOrder {
     struct UsageOrder {
         TokenType tokenType;
         address tokenAddress;
-        uint256 requestedSeconds;
+        uint256 requestedBytes;
     }
     struct SettleUsageToNodeRequest {
         address client;
         address node;
-        uint256 totalServedUsage;
+        uint256 totalServedBytes;
         address tokenAddress;
     }
 }

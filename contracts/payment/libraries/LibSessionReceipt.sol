@@ -14,7 +14,7 @@ library LibSessionReceipt {
     struct SessionReceipt {
         address client;
         address node;
-        uint256 totalSecondsServed;
+        uint256 totalServedBytes;
         TokenType tokenType;
         address tokenAddress;
         SessionReceiptStatus status;

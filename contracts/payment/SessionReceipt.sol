@@ -23,7 +23,7 @@ contract SessionReceipt is ReentrancyGuard, Ownable {
     event SessionReceiptCreated(
         address indexed client,
         address indexed node,
-        uint256 totalSecondsServed,
+        uint256 totalServedBytes,
         address tokenAddress,
         uint256 nonce
     );
@@ -122,14 +122,14 @@ contract SessionReceipt is ReentrancyGuard, Ownable {
     /**
      * @notice Create session receipt (called by whitelisted nodes)
      * @param client Client address that node serves
-     * @param totalSecondsServed Total seconds served by node for given client
+     * @param totalServedBytes Total served bytes by node for given client
      * @param tokenAddress Token address of reward token
      * @param tokenType Token type of reward token
      * @param nonce Latest nonce of client (unused nonce)
      */
     function createSessionReceipt(
         address client,
-        uint256 totalSecondsServed,
+        uint256 totalServedBytes,
         address tokenAddress,
         TokenType tokenType,
         uint256 nonce
@@ -140,7 +140,7 @@ contract SessionReceipt is ReentrancyGuard, Ownable {
             memory sessionReceipt = LibSessionReceipt.SessionReceipt({
                 client: client,
                 node: msg.sender,
-                totalSecondsServed: totalSecondsServed,
+                totalServedBytes: totalServedBytes,
                 tokenType: tokenType,
                 tokenAddress: tokenAddress,
                 status: LibSessionReceipt.SessionReceiptStatus.PENDING,
@@ -153,7 +153,7 @@ contract SessionReceipt is ReentrancyGuard, Ownable {
         emit SessionReceiptCreated(
             client,
             msg.sender,
-            totalSecondsServed,
+            totalServedBytes,
             tokenAddress,
             nonce
         );
@@ -244,7 +244,7 @@ contract SessionReceipt is ReentrancyGuard, Ownable {
             LibUsageOrder.SettleUsageToNodeRequest({
                 client: sessionReceipt.client,
                 node: sessionReceipt.node,
-                totalServedUsage: sessionReceipt.totalSecondsServed,
+                totalServedBytes: sessionReceipt.totalServedBytes,
                 tokenAddress: sessionReceipt.tokenAddress
             })
         );
