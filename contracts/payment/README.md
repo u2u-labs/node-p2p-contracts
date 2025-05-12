@@ -275,7 +275,3 @@ Each session receipt includes:
 - `SessionReceiptRejected`
 
 ---
-
-## 📄 License
-
-MIT © 2025
