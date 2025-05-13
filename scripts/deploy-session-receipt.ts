@@ -14,7 +14,7 @@ async function main() {
     "SessionReceipt"
   );
   const nodeStorageAddress = "0x8B0b7E0c9C5a6B48F5bA0352713B85c2C4973B78";
-  const usageDespositorAddress = "0xe614Aabc67DD12aBD788986D09267C205dE749A1";
+  const usageDespositorAddress = "0x7BD15c4eE33f9E928020c1735E773AaBD0a6c8D0";
   const SessionReceipt = await SessionReceiptContractFactory.deploy(
     nodeStorageAddress,
     usageDespositorAddress

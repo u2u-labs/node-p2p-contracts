@@ -384,6 +384,12 @@ contract UsageDepositor is ReentrancyGuard, Pausable, Ownable {
         return DAILY_FREE_USAGE - freeUsageUsed[client];
     }
 
+    function getClientLastMaintainFeePaid(
+        address client
+    ) public view returns (uint256) {
+        return lastMaintainFeePaidPerClient[client];
+    }
+
     function getRewardPerByte(address token) external view returns (uint256) {
         return rewardPerBytePerToken[token];
     }

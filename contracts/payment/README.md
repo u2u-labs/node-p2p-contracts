@@ -93,6 +93,7 @@ purchaseUsage(LibUsageOrder.UsageOrder calldata usageOrder)
 | `getClientFreeUsage(address)`           | Remaining free usage for the day         |
 | `isPaidMaintainFee(address)`            | Whether client is within fee window      |
 | `getRewardPerByte(address)`             | Reward rate for a token (per byte)       |
+| `getClientLastMaintainFeePaid(address)` | Get last time client paid maintain fee   |
 
 ---
 
