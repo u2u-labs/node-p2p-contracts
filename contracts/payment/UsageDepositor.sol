@@ -14,20 +14,32 @@ import "../interfaces/INodesStorage.sol";
 contract UsageDepositor is ReentrancyGuard, Pausable, Ownable {
     using SafeERC20 for IERC20;
 
-    // === Constants ===
+    // ========================
+    // ======== CONSTS ========
+    // ========================
+
     address public constant NATIVE_TOKEN_ADDRESS = address(0);
     uint256 public constant FREE_USAGE_RESET_INTERVAL = 1 days;
     uint256 public constant MAINTAIN_FEE_PAYMENT_PERIOD = 30 days;
 
-    // === Configurable Parameters ===
+    // ========================
+    // ===== CONFIG PARAM =====
+    // ========================
+
     uint256 public DAILY_FREE_USAGE = 500 * 1024; // 500 KB in bytes
     uint256 public MAINTAIN_FEE;
 
-    // === External Contracts ===
+    // ========================
+    // ====== EXTERNALS =======
+    // ========================
+
     address public nodesStorage;
     address public sessionReceiptContract;
 
-    // === State ===
+    // ========================
+    // ======= STORAGE ========
+    // ========================
+
     mapping(address => uint256) private lastMaintainFeePaidPerClient;
     mapping(address => bool) private whitelistedTokens;
     mapping(address => uint256) private rewardPerBytePerToken;
@@ -36,16 +48,19 @@ contract UsageDepositor is ReentrancyGuard, Pausable, Ownable {
     mapping(address => uint256) public freeUsageLastReset;
     mapping(address => uint256) public freeUsageUsed;
 
-    // === Events ===
+    // ========================
+    // ========= EVENTS =======
+    // ========================
+
     event UsagePurchased(
-        address client,
+        address indexed client,
         uint256 totalPrice,
         uint256 usageBytes
     );
     event UsageSettledToNode(
-        address client,
-        address node,
-        uint256 totalServedBytes,
+        address indexed client,
+        address indexed node,
+        uint256 servedBytes,
         uint256 totalToken
     );
     event TokenWhitelisted(address token);
@@ -57,39 +72,46 @@ contract UsageDepositor is ReentrancyGuard, Pausable, Ownable {
         uint256 timestamp
     );
 
-    // === Custom Errors ===
-    error UsageDepositor__AddressZero(string errorMessage);
-    error UsageDepositor__InvalidCaller(string errorMessage);
+    // ========================
+    // ======== ERRORS ========
+    // ========================
+
+    error UsageDepositor__AddressZero(string reason);
+    error UsageDepositor__InvalidCaller(string reason);
     error UsageDepositor__TokenNotWhitelisted();
     error UsageDepositor__InvalidNodeAddress();
-    error UsageDepositor__ExceedtokensLength(uint8);
-    error UsageDepositor__InvalidTokenType();
+    error UsageDepositor__ExceedtokensLength(uint8 maxAllowed);
+    error UsageDepositor__InvalidTotalServedBytes();
     error UsageDepositor__InvalidNativeTokenAddress();
+    error UsageDepositor__InvalidERC20Address();
     error UsageDepositor__InsufficientMaintainFee();
+    error UsageDepositor__InsufficientNodeFee();
     error UsageDepositor__WithdrawFailed();
+    error UsageDepositor__NativeTokenNotAcceptedWithERC20();
     error UsageDepositor__MaintainFeeNotDueYet(
-        uint256 lastPaidAt,
-        uint256 nextEligibleAt,
-        uint256 currentTime
+        uint256 lastPaid,
+        uint256 nextEligible,
+        uint256 nowTime
     );
-    error UsageDepositor__MaintainFeeNotPaid(
-        uint256 lastPaidAt,
-        uint256 currentTime
-    );
+    error UsageDepositor__MaintainFeeNotPaid(uint256 lastPaid, uint256 nowTime);
     error UsageDepositor__TransferTokenFailed(
         address from,
         address to,
-        address tokenAddress,
+        address token,
         uint256 amount
     );
     error UsageDepositor__InsufficientUsage();
     error UsageDepositor__InsufficientTokenBalance(
-        uint256 requireAmount,
-        uint256 currentBalance,
-        address tokenAddress
+        uint256 required,
+        uint256 balance,
+        address token
     );
+    error UsageDepositor__RewardPerByteNotSet(address token);
 
-    // === Modifiers ===
+    // ========================
+    // ======= MODIFIERS ======
+    // ========================
+
     modifier onlySessionReceiptContract() {
         if (msg.sender != sessionReceiptContract) {
             revert UsageDepositor__InvalidCaller("Only SessionReceiptContract");
@@ -97,10 +119,6 @@ contract UsageDepositor is ReentrancyGuard, Pausable, Ownable {
         _;
     }
 
-    /**
-     * @notice Check if last reset free usage was more than FREE_USAGE_RESET_INTERVAL ago, if so reset it
-     * @param client Client address
-     */
     modifier checkAndResetFreeUsage(address client) {
         uint256 lastReset = freeUsageLastReset[client];
         uint256 todayStart = block.timestamp -
@@ -112,48 +130,33 @@ contract UsageDepositor is ReentrancyGuard, Pausable, Ownable {
         _;
     }
 
-    /**
-     * @notice Constructor
-     * @param _sessionReceiptContract Session receipt contract
-     * @param _nodesStorage Nodes storage contract
-     */
+    // ========================
+    // ======== INIT ==========
+    // ========================
+
     constructor(address _sessionReceiptContract, address _nodesStorage) {
         sessionReceiptContract = _sessionReceiptContract;
         nodesStorage = _nodesStorage;
     }
 
-    // === Admin Functions ===
+    // ========================
+    // ===== ADMIN FUNCTIONS ==
+    // ========================
 
-    /**
-     * @notice Set daily free usage (called by owner)
-     * @param _DAILY_FREE_USAGE Daily free usage in bytes
-     */
     function setDailyFreeUsage(uint256 _DAILY_FREE_USAGE) external onlyOwner {
         DAILY_FREE_USAGE = _DAILY_FREE_USAGE;
     }
 
-    /**
-     * @notice Set maintain fee (called by owner)
-     * @param _MAINTAIN_FEE Maintain fee in wei
-     */
     function setMaintainFee(uint256 _MAINTAIN_FEE) external onlyOwner {
         MAINTAIN_FEE = _MAINTAIN_FEE;
     }
 
-    /**
-     * @notice Set session receipt contract address (called by owner)
-     * @param _sessionReceiptContract Session receipt contract address
-     */
     function setSessionReceiptContract(
         address _sessionReceiptContract
     ) external onlyOwner {
         sessionReceiptContract = _sessionReceiptContract;
     }
 
-    /**
-     * @notice Set nodes storage contract address (called by owner)
-     * @param _nodesStorage Nodes storage contract address
-     */
     function setNodesStorage(address _nodesStorage) external onlyOwner {
         if (_nodesStorage == address(0)) {
             revert UsageDepositor__InvalidNodeAddress();
@@ -161,10 +164,6 @@ contract UsageDepositor is ReentrancyGuard, Pausable, Ownable {
         nodesStorage = _nodesStorage;
     }
 
-    /**
-     * @notice Add tokens to whitelist list (called by owner)
-     * @param tokens List of token addresses to add
-     */
     function addWhitelistedTokens(
         address[] calldata tokens
     ) external onlyOwner {
@@ -177,10 +176,6 @@ contract UsageDepositor is ReentrancyGuard, Pausable, Ownable {
         }
     }
 
-    /**
-     * @notice Remove token by address from whitelisted tokens list (called by owner)
-     * @param token Address of token to remove
-     */
     function removeWhitelistedToken(address token) external onlyOwner {
         if (!whitelistedTokens[token]) {
             revert UsageDepositor__TokenNotWhitelisted();
@@ -190,11 +185,6 @@ contract UsageDepositor is ReentrancyGuard, Pausable, Ownable {
         emit TokenUnwhitelisted(token);
     }
 
-    /**
-     * @notice Set reward per byte for a token (called by owner)
-     * @param token Address of token
-     * @param tokenAmount reward per byte (e.g., 1e12 = 0.000000000001 token per byte)
-     */
     function setRewardPerByte(
         address token,
         uint256 tokenAmount
@@ -205,12 +195,6 @@ contract UsageDepositor is ReentrancyGuard, Pausable, Ownable {
         rewardPerBytePerToken[token] = tokenAmount;
     }
 
-    /**
-     * @notice Withdraw token or native balance (called by owner)
-     * @param token Token address or zero address for native
-     * @param to Recipient address
-     * @param amount Amount to withdraw
-     */
     function withdraw(
         address token,
         address to,
@@ -221,66 +205,34 @@ contract UsageDepositor is ReentrancyGuard, Pausable, Ownable {
         }
         if (token == NATIVE_TOKEN_ADDRESS) {
             (bool success, ) = to.call{value: amount}("");
-            if (!success) {
-                revert UsageDepositor__WithdrawFailed();
-            }
+            if (!success) revert UsageDepositor__WithdrawFailed();
         } else {
             IERC20(token).safeTransfer(to, amount);
         }
         emit Withdrawn(token, to, amount);
     }
 
-    // === Client Functions ===
-
-    /**
-     * @notice Get remaining client's usage (unit: byte)
-     * @param client Client address
-     */
-    function getClientUsage(address client) external view returns (uint256) {
-        return clientUsagesInBytes[client];
+    function pause() external onlyOwner {
+        _pause();
     }
 
-    /**
-     * @notice Get remaining free usage for the client
-     * @param client Client address
-     */
-    function getClientFreeUsage(address client) public view returns (uint256) {
-        return DAILY_FREE_USAGE - freeUsageUsed[client];
+    function unpause() external onlyOwner {
+        _unpause();
     }
 
-    /**
-     * @notice Get reward per byte for a token
-     * @param token Address of token
-     */
-    function getRewardPerByte(address token) external view returns (uint256) {
-        return rewardPerBytePerToken[token];
-    }
+    // ========================
+    // ===== CLIENT FUNCTIONS =
+    // ========================
 
-    /**
-     * @notice Check if client has already paid maintain fee this period (30 days)
-     * @param client Client address
-     */
-    function isPaidMaintainFee(address client) external view returns (bool) {
-        return
-            lastMaintainFeePaidPerClient[client] + MAINTAIN_FEE_PAYMENT_PERIOD >
-            block.timestamp;
-    }
-
-    /**
-     * @notice Pay maintain fee (called by client)
-     */
     function payMaintainFee() external payable nonReentrant whenNotPaused {
-        if (msg.value < MAINTAIN_FEE) {
+        if (msg.value < MAINTAIN_FEE)
             revert UsageDepositor__InsufficientMaintainFee();
-        }
 
         uint256 lastPaidAt = lastMaintainFeePaidPerClient[msg.sender];
-        uint256 nextPaidAt = lastPaidAt + MAINTAIN_FEE_PAYMENT_PERIOD;
-
         if (lastPaidAt + MAINTAIN_FEE_PAYMENT_PERIOD > block.timestamp) {
             revert UsageDepositor__MaintainFeeNotDueYet(
                 lastPaidAt,
-                nextPaidAt,
+                lastPaidAt + MAINTAIN_FEE_PAYMENT_PERIOD,
                 block.timestamp
             );
         }
@@ -289,10 +241,6 @@ contract UsageDepositor is ReentrancyGuard, Pausable, Ownable {
         emit MaintainFeePaid(msg.sender, msg.value, block.timestamp);
     }
 
-    /**
-     * @notice Purchase usage for a client (called by client, only after paid maintain fee)
-     * @param usageOrder Usage order details to purchase
-     */
     function purchaseUsage(
         LibUsageOrder.UsageOrder calldata usageOrder
     ) external payable nonReentrant whenNotPaused {
@@ -308,46 +256,42 @@ contract UsageDepositor is ReentrancyGuard, Pausable, Ownable {
         }
 
         uint256 requestedBytes = usageOrder.requestedBytes;
-        TokenType tokenType = usageOrder.tokenType;
-        address tokenAddress = usageOrder.tokenAddress;
-        uint256 rewardPerByte = rewardPerBytePerToken[tokenAddress];
-        uint256 totalPrice = requestedBytes * rewardPerByte;
+        address token = usageOrder.tokenAddress;
+        uint256 pricePerByte = rewardPerBytePerToken[token];
+        uint256 totalPrice = requestedBytes * pricePerByte;
 
-        if (!whitelistedTokens[tokenAddress]) {
+        if (!whitelistedTokens[token])
             revert UsageDepositor__TokenNotWhitelisted();
-        }
-        require(rewardPerByte > 0, "Reward per byte is not set");
-        require(requestedBytes > 0, "Requested bytes must be > 0");
+        if (pricePerByte == 0)
+            revert UsageDepositor__RewardPerByteNotSet(token);
 
-        if (tokenType == TokenType.NATIVE) {
-            require(
-                tokenAddress == NATIVE_TOKEN_ADDRESS,
-                "Invalid native token address"
-            );
-            require(msg.value == totalPrice, "Incorrect amount of native sent");
+        if (usageOrder.tokenType == TokenType.NATIVE) {
+            if (token != NATIVE_TOKEN_ADDRESS)
+                revert UsageDepositor__InvalidNativeTokenAddress();
+            if (msg.value < totalPrice)
+                revert UsageDepositor__InsufficientNodeFee();
         } else {
-            require(
-                tokenAddress != NATIVE_TOKEN_ADDRESS,
-                "Invalid ERC20 token address"
-            );
-            require(msg.value == 0, "Native token not accepted with ERC20");
-            IERC20(tokenAddress).safeTransferFrom(
+            if (token == NATIVE_TOKEN_ADDRESS)
+                revert UsageDepositor__InvalidNativeTokenAddress();
+            if (msg.value > 0)
+                revert UsageDepositor__NativeTokenNotAcceptedWithERC20();
+            IERC20(token).safeTransferFrom(
                 msg.sender,
                 address(this),
                 totalPrice
             );
         }
 
-        tokenBalances[tokenAddress] += totalPrice;
+        tokenBalances[token] += totalPrice;
         clientUsagesInBytes[msg.sender] += requestedBytes;
 
         emit UsagePurchased(msg.sender, totalPrice, requestedBytes);
     }
 
-    /**
-     * @notice Settle usage to node (transfer client's deposit token to node) (called by SessionReceiptContract)
-     * @param request Request details to settle usage to node
-     */
+    // ========================
+    // ===== SESSION RECEIPT FUNCTIONS =
+    // ========================
+
     function settleUsageToNode(
         LibUsageOrder.SettleUsageToNodeRequest calldata request
     )
@@ -359,95 +303,100 @@ contract UsageDepositor is ReentrancyGuard, Pausable, Ownable {
     {
         address client = request.client;
         address node = request.node;
-        address tokenAddress = request.tokenAddress;
-        uint256 totalServedBytes = request.totalServedBytes;
+        address token = request.tokenAddress;
+        uint256 servedBytes = request.totalServedBytes;
 
-        require(totalServedBytes > 0, "Total served bytes must be > 0");
-        require(
-            INodesStorage(nodesStorage).isValidNode(node),
-            "Invalid node address"
-        );
-
-        if (!whitelistedTokens[tokenAddress]) {
+        if (servedBytes == 0) revert UsageDepositor__InvalidTotalServedBytes();
+        if (!INodesStorage(nodesStorage).isValidNode(node))
+            revert UsageDepositor__InvalidNodeAddress();
+        if (!whitelistedTokens[token])
             revert UsageDepositor__TokenNotWhitelisted();
-        }
 
-        uint256 clientFreeBytes = getClientFreeUsage(client);
-        uint256 chargedServedBytes = totalServedBytes > clientFreeBytes
-            ? totalServedBytes - clientFreeBytes
+        uint256 freeBytes = getClientFreeUsage(client);
+        uint256 chargedBytes = servedBytes > freeBytes
+            ? servedBytes - freeBytes
             : 0;
-        uint256 usedFreeBytes = totalServedBytes - chargedServedBytes;
+        uint256 usedFreeBytes = servedBytes - chargedBytes;
 
-        if (clientUsagesInBytes[client] < chargedServedBytes) {
+        if (clientUsagesInBytes[client] < chargedBytes)
             revert UsageDepositor__InsufficientUsage();
-        }
 
-        uint256 rewardPerByte = rewardPerBytePerToken[tokenAddress];
-        require(rewardPerByte > 0, "Reward per byte is not set");
-        uint256 totalPrice = chargedServedBytes * rewardPerByte;
+        uint256 pricePerByte = rewardPerBytePerToken[token];
+        if (pricePerByte == 0)
+            revert UsageDepositor__RewardPerByteNotSet(token);
 
-        uint256 rewardFreePerByte = rewardPerBytePerToken[NATIVE_TOKEN_ADDRESS];
-        uint256 freeBytesPrice = usedFreeBytes * rewardFreePerByte;
+        uint256 chargedTotal = chargedBytes * pricePerByte;
+        uint256 rewardFree = rewardPerBytePerToken[NATIVE_TOKEN_ADDRESS];
+        uint256 freeTotal = usedFreeBytes * rewardFree;
 
-        if (tokenBalances[tokenAddress] < totalPrice) {
+        if (tokenBalances[token] < chargedTotal)
             revert UsageDepositor__InsufficientTokenBalance(
-                totalPrice,
-                tokenBalances[tokenAddress],
-                tokenAddress
+                chargedTotal,
+                tokenBalances[token],
+                token
             );
-        }
-
-        if (tokenBalances[NATIVE_TOKEN_ADDRESS] < freeBytesPrice) {
+        if (tokenBalances[NATIVE_TOKEN_ADDRESS] < freeTotal)
             revert UsageDepositor__InsufficientTokenBalance(
-                freeBytesPrice,
+                freeTotal,
                 tokenBalances[NATIVE_TOKEN_ADDRESS],
                 NATIVE_TOKEN_ADDRESS
             );
-        }
 
-        clientUsagesInBytes[client] -= chargedServedBytes;
-        tokenBalances[tokenAddress] -= totalPrice;
+        clientUsagesInBytes[client] -= chargedBytes;
+        tokenBalances[token] -= chargedTotal;
         freeUsageUsed[client] += usedFreeBytes;
 
-        if (tokenAddress == NATIVE_TOKEN_ADDRESS) {
-            (bool success, ) = node.call{value: totalPrice + freeBytesPrice}(
-                ""
-            );
-            if (!success) {
+        if (token == NATIVE_TOKEN_ADDRESS) {
+            (bool sent, ) = node.call{value: chargedTotal + freeTotal}("");
+            if (!sent)
                 revert UsageDepositor__TransferTokenFailed(
                     address(this),
                     node,
-                    NATIVE_TOKEN_ADDRESS,
-                    totalPrice + freeBytesPrice
+                    token,
+                    chargedTotal + freeTotal
                 );
-            }
         } else {
-            IERC20(tokenAddress).safeTransfer(node, totalPrice);
+            IERC20(token).safeTransfer(node, chargedTotal);
             if (usedFreeBytes > 0) {
-                (bool success, ) = node.call{value: freeBytesPrice}("");
-                if (!success) {
+                (bool sent, ) = node.call{value: freeTotal}("");
+                if (!sent)
                     revert UsageDepositor__TransferTokenFailed(
                         address(this),
                         node,
                         NATIVE_TOKEN_ADDRESS,
-                        freeBytesPrice
+                        freeTotal
                     );
-                }
             }
         }
 
-        emit UsageSettledToNode(client, node, chargedServedBytes, totalPrice);
+        emit UsageSettledToNode(client, node, chargedBytes, chargedTotal);
     }
 
-    // === Emergency Controls ===
+    // ========================
+    // ========= VIEWS ========
+    // ========================
 
-    function pause() external onlyOwner {
-        _pause();
+    function getClientUsage(address client) external view returns (uint256) {
+        return clientUsagesInBytes[client];
     }
 
-    function unpause() external onlyOwner {
-        _unpause();
+    function getClientFreeUsage(address client) public view returns (uint256) {
+        return DAILY_FREE_USAGE - freeUsageUsed[client];
     }
+
+    function getRewardPerByte(address token) external view returns (uint256) {
+        return rewardPerBytePerToken[token];
+    }
+
+    function isPaidMaintainFee(address client) external view returns (bool) {
+        return
+            lastMaintainFeePaidPerClient[client] + MAINTAIN_FEE_PAYMENT_PERIOD >
+            block.timestamp;
+    }
+
+    // ========================
+    // ===== FALLBACK =========
+    // ========================
 
     receive() external payable {}
 }
