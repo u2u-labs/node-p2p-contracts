@@ -28,7 +28,7 @@ The `Voting` contract allows nodes to report misbehaving peers and, once a quoru
 
 Two core smart contracts for a decentralized usage-based payment system:
 
-- `UsageDepositor.sol`: Handles token deposits from clients in exchange for usage time, and manages token settlements to nodes.
+- `UsageDepositor.sol`: Handles token deposits from clients in exchange for usage data (bytes), and manages token settlements to nodes.
 - `SessionReceipt.sol`: Enables nodes to create usage receipts, which clients confirm or reject, and nodes later redeem for token payouts.
 
 - [Contracts](./contracts/payment)
